@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "718463587029",
+    "project_id": "artvista-2c1e0",
+    "storage_bucket": "artvista-2c1e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718463587029:android:342629ce6e0b60a16d085c",
+        "android_client_info": {
+          "package_name": "ionic.artvista"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "718463587029-afdf7nj461p371qk32lrsj05anmbql5k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ionic.artvista",
+            "certificate_hash": "4351503a990921917622d31490e7b28ffa36304a"
+          }
+        },
+        {
+          "client_id": "718463587029-brdalitqjtfqe8ucvu32dchcjr92cqj6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFmibI8PXU_kefqJagpbsmWWw78yXZAi0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "718463587029-brdalitqjtfqe8ucvu32dchcjr92cqj6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
