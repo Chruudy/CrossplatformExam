@@ -2,11 +2,16 @@ import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 import NavBar from '../views/NavBar.vue';
 import LoginPage from '../views/LoginPage.vue';
+import RegisterPage from '../views/RegisterPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     component: LoginPage
+  },
+  {
+    path: '/register',
+    component: RegisterPage
   },
   {
     path: '/page/',
