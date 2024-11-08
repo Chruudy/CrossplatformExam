@@ -36,15 +36,22 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonCard, IonCardContent, IonItem, IonLabel, IonInput, IonButton } from '@ionic/vue';
+import { signIn } from '../services/authentication'; // Import the signIn function
 
 const username = ref('');
 const password = ref('');
 const router = useRouter();
 
-const login = () => {
-    
+const login = async () => {
   if (username.value && password.value) {
-    router.push('page/home');
+    try {
+      const user = await signIn(username.value, password.value);
+      console.log("Signed in user:", user);
+      router.push('/page/home'); // Navigate to the homepage
+    } catch (error) {
+      console.error("Sign-in error:", error);
+      alert("Error signing in: " + (error as Error).message);
+    }
   } else {
     alert('Please enter both username and password');
   }
