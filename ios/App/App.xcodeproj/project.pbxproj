@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 48;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -15,13 +15,6 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
-		EDD2FD782CDD82B700B3F451 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2FD772CDD82B700B3F451 /* FirebaseAnalytics */; };
-		EDD2FD7A2CDD82B700B3F451 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2FD792CDD82B700B3F451 /* FirebaseAuth */; };
-		EDD2FD7C2CDD82B700B3F451 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2FD7B2CDD82B700B3F451 /* FirebaseCore */; };
-		EDD2FD7E2CDD82B700B3F451 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2FD7D2CDD82B700B3F451 /* FirebaseDatabase */; };
-		EDD2FD802CDD82B700B3F451 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2FD7F2CDD82B700B3F451 /* FirebaseFirestore */; };
-		EDD2FD822CDD82B700B3F451 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2FD812CDD82B700B3F451 /* FirebaseStorage */; };
-		EDD2FD842CDD831E00B3F451 /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = EDD2FD832CDD831E00B3F451 /* FirebasePerformance */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,14 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EDD2FD7E2CDD82B700B3F451 /* FirebaseDatabase in Frameworks */,
-				EDD2FD782CDD82B700B3F451 /* FirebaseAnalytics in Frameworks */,
-				EDD2FD7A2CDD82B700B3F451 /* FirebaseAuth in Frameworks */,
-				EDD2FD7C2CDD82B700B3F451 /* FirebaseCore in Frameworks */,
-				EDD2FD822CDD82B700B3F451 /* FirebaseStorage in Frameworks */,
 				A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */,
-				EDD2FD842CDD831E00B3F451 /* FirebasePerformance in Frameworks */,
-				EDD2FD802CDD82B700B3F451 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -156,7 +142,6 @@
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
-				EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -352,8 +337,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -368,10 +352,7 @@
 				DEVELOPMENT_TEAM = UXQMRH987N;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = ionic.artvista;
@@ -392,10 +373,7 @@
 				DEVELOPMENT_TEAM = UXQMRH987N;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ionic.artvista;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -427,55 +405,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 11.4.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		EDD2FD772CDD82B700B3F451 /* FirebaseAnalytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAnalytics;
-		};
-		EDD2FD792CDD82B700B3F451 /* FirebaseAuth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAuth;
-		};
-		EDD2FD7B2CDD82B700B3F451 /* FirebaseCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCore;
-		};
-		EDD2FD7D2CDD82B700B3F451 /* FirebaseDatabase */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseDatabase;
-		};
-		EDD2FD7F2CDD82B700B3F451 /* FirebaseFirestore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseFirestore;
-		};
-		EDD2FD812CDD82B700B3F451 /* FirebaseStorage */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseStorage;
-		};
-		EDD2FD832CDD831E00B3F451 /* FirebasePerformance */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EDD2FD762CDD82B700B3F451 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebasePerformance;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 504EC2FC1FED79650016851F /* Project object */;
 }
