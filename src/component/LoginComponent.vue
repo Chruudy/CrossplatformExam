@@ -16,18 +16,9 @@
               <ion-label position="floating">Password</ion-label>
               <ion-input v-model="password" type="password" />
             </ion-item>
-            <ion-button expand="block" @click="handleSignIn"
-              >Sign In</ion-button
-            >
-            <ion-button expand="block" fill="outline" @click="handleSignUp"
-              >Sign Up</ion-button
-            >
-            <ion-button
-              expand="block"
-              fill="clear"
-              @click="handleAnonymousLogin"
-              >Login Anonymously</ion-button
-            >
+            <ion-button expand="block" @click="handleSignIn">Sign In</ion-button>
+            <ion-button expand="block" fill="outline" @click="handleSignUp">Sign Up</ion-button>
+            <ion-button expand="block" fill="clear" @click="handleAnonymousLogin">Login Anonymously</ion-button>
           </ion-card-content>
         </ion-card>
       </div>
@@ -51,18 +42,17 @@ import {
   IonItem,
   IonLabel,
 } from "@ionic/vue";
-import { signIn, signUp, signInAnonymously } from "../services/authentication"; // Adjust the path as necessary
+import { signInWithEmail, signUpWithEmail, signInAnonymouslyUser } from "../services/authentication";
 
 const email = ref("");
 const password = ref("");
-
 const router = useRouter();
 
 const handleSignIn = async () => {
   try {
-    const user = await signIn(email.value, password.value);
+    const user = await signInWithEmail(email.value, password.value);
     console.log("Signed in user:", user);
-    router.push("/tabs/home"); // Navigate to the homepage
+    router.push("/page/home"); // Navigate to the homepage
   } catch (error) {
     console.error("Sign-in error:", error);
     alert("Error signing in: " + (error as Error).message);
@@ -71,9 +61,9 @@ const handleSignIn = async () => {
 
 const handleSignUp = async () => {
   try {
-    const user = await signUp(email.value, password.value);
+    const user = await signUpWithEmail(email.value, email.value, password.value);
     console.log("Signed up user:", user);
-    router.push("/tabs/home"); // Navigate to the homepage
+    router.push("/page/home"); // Navigate to the homepage
   } catch (error) {
     console.error("Sign-up error:", error);
     alert("Error signing up: " + (error as Error).message);
@@ -82,9 +72,9 @@ const handleSignUp = async () => {
 
 const handleAnonymousLogin = async () => {
   try {
-    const user = await signInAnonymously();
+    const user = await signInAnonymouslyUser();
     console.log("Signed in anonymously:", user);
-    router.push("/tabs/home"); // Navigate to the homepage
+    router.push("/page/home"); // Navigate to the homepage
   } catch (error) {
     console.error("Anonymous sign-in error:", error);
     alert("Error signing in anonymously: " + (error as Error).message);

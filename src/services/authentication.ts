@@ -1,12 +1,20 @@
-import { getAuth, signInWithEmailAndPassword, signInAnonymously, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signOut, linkWithCredential, EmailAuthProvider, updateProfile } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, signInAnonymously, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signOut, linkWithCredential, EmailAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import app from '../services/firebase';
 
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 export const signUpWithEmail = async (name: string, email: string, password: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(userCredential.user, { displayName: name });
+    await firebaseUpdateProfile(userCredential.user, { displayName: name });
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
+      firstName: name.split(' ')[0],
+      lastName: name.split(' ')[1] || '',
+      displayName: name,
+      photoURL: ''
+    });
     return userCredential;
   } catch (error) {
     console.error('Error during sign-up:', error);
@@ -63,5 +71,40 @@ export const linkAnonymousAccount = async (email: string, password: string) => {
   } catch (error) {
     console.error('Error during account linking:', error);
     throw new Error('Failed to link account. Please try again.');
+  }
+};
+
+export const updateProfile = async (profile: { displayName: string; photoURL: string }) => {
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      await firebaseUpdateProfile(user, profile);
+      await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
+    } else {
+      throw new Error('No user is currently signed in.');
+    }
+  } catch (error) {
+    console.error('Error during profile update:', error);
+    throw new Error('Failed to update profile. Please try again.');
+  }
+};
+
+export const getUserProfile = async () => {
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const docRef = doc(db, 'users', user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data();
+      } else {
+        throw new Error('No user profile found.');
+      }
+    } else {
+      throw new Error('No user is currently signed in.');
+    }
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    throw new Error('Failed to get user profile. Please try again.');
   }
 };
