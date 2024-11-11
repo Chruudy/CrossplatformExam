@@ -1,9 +1,16 @@
 import { getAuth, signInWithEmailAndPassword, signInAnonymously, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signOut, linkWithCredential, EmailAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import app from '../services/firebase';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import app, { storage } from '../services/firebase';
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+export const uploadProfilePicture = async (userId: string, imageDataUrl: string) => {
+  const storageRef = ref(storage, `profilePictures/${userId}`);
+  await uploadString(storageRef, imageDataUrl, 'data_url');
+  return await getDownloadURL(storageRef);
+};
 
 export const signUpWithEmail = async (name: string, email: string, password: string) => {
   try {
@@ -74,12 +81,17 @@ export const linkAnonymousAccount = async (email: string, password: string) => {
   }
 };
 
-export const updateProfile = async (profile: { displayName: string; photoURL: string }) => {
+export const updateProfile = async (profile: { displayName: string; photoURL: string; firstName: string; lastName: string }) => {
   try {
     const user = auth.currentUser;
     if (user) {
-      await firebaseUpdateProfile(user, profile);
-      await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
+      await firebaseUpdateProfile(user, { displayName: profile.displayName, photoURL: profile.photoURL });
+      await setDoc(doc(db, 'users', user.uid), {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        displayName: profile.displayName,
+        photoURL: profile.photoURL
+      }, { merge: true });
     } else {
       throw new Error('No user is currently signed in.');
     }

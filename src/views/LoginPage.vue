@@ -39,7 +39,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonCard, IonCardContent, IonItem, IonLabel, IonInput, IonButton } from '@ionic/vue';
-import { signInWithEmail, signInWithGoogle, signInAnonymouslyUser } from '../services/authentication'; // Import the signInWithEmail, signInWithGoogle, and signInAnonymouslyUser functions
+import { signInWithEmail, signInWithGoogle, signInAnonymouslyUser } from '../services/authentication';
 
 const username = ref('');
 const password = ref('');

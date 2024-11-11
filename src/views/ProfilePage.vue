@@ -31,10 +31,8 @@
             <ion-label position="floating">Display Name</ion-label>
             <ion-input v-model="displayName" type="text"></ion-input>
           </ion-item>
-          <ion-item>
-            <ion-label position="floating">Profile Picture URL</ion-label>
-            <ion-input v-model="profilePicture" type="text"></ion-input>
-          </ion-item>
+          <ion-button expand="block" @click="takePhoto">Take Photo</ion-button>
+          <ion-button expand="block" @click="selectPhoto">Select Photo</ion-button>
           <ion-button expand="block" @click="saveProfile">Save Changes</ion-button>
         </div>
         <div v-else>
@@ -50,9 +48,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonItem, IonLabel, IonInput, IonIcon, IonButtons } from '@ionic/vue';
 import { settings, close } from 'ionicons/icons';
-import { logoutUser, updateProfile, getUserProfile } from '../services/authentication'; // Import the necessary functions
+import { logoutUser, updateProfile, getUserProfile, uploadProfilePicture } from '../services/authentication'; // Import the necessary functions
+import { auth } from '../services/firebase'; // Import auth from firebase configuration
 
 const isEditMode = ref(false);
 const firstName = ref('');
@@ -66,11 +66,49 @@ const toggleEditMode = () => {
   isEditMode.value = !isEditMode.value;
 };
 
+const takePhoto = async () => {
+  try {
+    const image = await Camera.getPhoto({
+      resultType: CameraResultType.DataUrl,
+      source: CameraSource.Camera,
+      quality: 100
+    });
+    if (image.dataUrl) {
+      const user = auth.currentUser;
+      if (user) {
+        profilePicture.value = await uploadProfilePicture(user.uid, image.dataUrl);
+      }
+    }
+  } catch (error) {
+    console.error("Error taking photo:", error);
+  }
+};
+
+const selectPhoto = async () => {
+  try {
+    const image = await Camera.getPhoto({
+      resultType: CameraResultType.DataUrl,
+      source: CameraSource.Photos,
+      quality: 100
+    });
+    if (image.dataUrl) {
+      const user = auth.currentUser;
+      if (user) {
+        profilePicture.value = await uploadProfilePicture(user.uid, image.dataUrl);
+      }
+    }
+  } catch (error) {
+    console.error("Error selecting photo:", error);
+  }
+};
+
 const saveProfile = async () => {
   try {
     await updateProfile({
       displayName: displayName.value,
-      photoURL: profilePicture.value
+      photoURL: profilePicture.value,
+      firstName: firstName.value,
+      lastName: lastName.value
     });
     console.log("Profile updated successfully");
     alert("Profile updated successfully");
