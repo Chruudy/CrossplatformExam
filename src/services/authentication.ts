@@ -1,5 +1,5 @@
 import { getAuth, signInWithEmailAndPassword, signInAnonymously, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signOut, linkWithCredential, EmailAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import app, { storage } from '../services/firebase';
 
@@ -20,7 +20,11 @@ export const signUpWithEmail = async (name: string, email: string, password: str
       firstName: name.split(' ')[0],
       lastName: name.split(' ')[1] || '',
       displayName: name,
-      photoURL: ''
+      photoURL: '',
+      followers: 0,
+      views: 0,
+      likes: 0,
+      following: []
     });
     return userCredential;
   } catch (error) {
@@ -118,5 +122,44 @@ export const getUserProfile = async () => {
   } catch (error) {
     console.error('Error getting user profile:', error);
     throw new Error('Failed to get user profile. Please try again.');
+  }
+};
+
+export const getUserPosts = async () => {
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const postsQuery = query(collection(db, 'content'), where('artistId', '==', user.uid));
+      const querySnapshot = await getDocs(postsQuery);
+      return querySnapshot.docs.map(doc => doc.data());
+    } else {
+      throw new Error('No user is currently signed in.');
+    }
+  } catch (error) {
+    console.error('Error getting user posts:', error);
+    throw new Error('Failed to get user posts. Please try again.');
+  }
+};
+
+export const getUserFeed = async () => {
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const following = userDoc.data().following || [];
+        if (following.length > 0) {
+          const feedQuery = query(collection(db, 'content'), where('artistId', 'in', following));
+          const querySnapshot = await getDocs(feedQuery);
+          return querySnapshot.docs.map(doc => doc.data());
+        }
+      }
+      return [];
+    } else {
+      throw new Error('No user is currently signed in.');
+    }
+  } catch (error) {
+    console.error('Error getting user feed:', error);
+    throw new Error('Failed to get user feed. Please try again.');
   }
 };
