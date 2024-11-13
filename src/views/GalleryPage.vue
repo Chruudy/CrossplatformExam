@@ -84,21 +84,20 @@
 import { ref, computed } from 'vue';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle, IonItem, IonLabel, IonInput, IonButton, IonModal, IonButtons, IonList, IonTextarea } from '@ionic/vue';
 import { getFirestore, collection, query, where, getDocs, addDoc, updateDoc, doc, increment, arrayUnion, orderBy, limit } from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { app } from '../services/firebase';
-import { auth } from '../services/firebase';
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { app, auth } from '../services/firebase';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-const searchQuery = ref('');
-const images = ref([]);
+const searchQuery = ref<string>('');
+const images = ref<Array<{ id: string; src: string; alt: string; title: string; artistId: string }>>([]);
 const isUploadModalOpen = ref(false);
-const uploadTitle = ref('');
-const uploadTags = ref('');
-const uploadDescription = ref('');
+const uploadTitle = ref<string>('');
+const uploadTags = ref<string>('');
+const uploadDescription = ref<string>('');
 const uploadFile = ref<File | null>(null);
-const suggestedUsers = ref([]);
+const suggestedUsers = ref<Array<{ displayName: string }>>([]);
 const showSuggestions = ref(false);
 
 const filteredImages = computed(() => {
@@ -110,7 +109,7 @@ const search = async () => {
     showSuggestions.value = true;
     const artistQuery = query(collection(db, 'users'), where('displayName', '>=', searchQuery.value.slice(1)), orderBy('displayName'), limit(5));
     const querySnapshot = await getDocs(artistQuery);
-    suggestedUsers.value = querySnapshot.docs.map(doc => doc.data());
+    suggestedUsers.value = querySnapshot.docs.map(doc => doc.data() as { displayName: string });
   } else {
     showSuggestions.value = false;
     const contentQuery = query(collection(db, 'content'), where('title', '>=', searchQuery.value), where('title', '<=', searchQuery.value + '\uf8ff'));
@@ -125,7 +124,7 @@ const search = async () => {
   }
 };
 
-const selectUser = (user) => {
+const selectUser = (user: { displayName: string }) => {
   searchQuery.value = `@${user.displayName}`;
   showSuggestions.value = false;
   search();
@@ -163,23 +162,35 @@ const uploadImage = async () => {
   }
 
   const fileRef = storageRef(storage, `images/${user.uid}/${uploadFile.value.name}`);
-  await uploadBytes(fileRef, uploadFile.value);
-  const imageURL = await getDownloadURL(fileRef);
+  const uploadTask = uploadBytesResumable(fileRef, uploadFile.value);
 
-  await addDoc(collection(db, 'content'), {
-    title: uploadTitle.value,
-    imageURL,
-    artistId: user.uid,
-    tags: uploadTags.value.split(',').map(tag => tag.trim()), // Convert tags to an array
-    description: uploadDescription.value,
-    likes: 0,
-    comments: [],
-    createdAt: new Date()
-  });
+  uploadTask.on('state_changed', 
+    (snapshot) => {
+      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      console.log('Upload is ' + progress + '% done');
+    }, 
+    (error) => {
+      console.error('Upload failed:', error);
+      alert('Error uploading image: ' + error.message);
+    }, 
+    async () => {
+      const imageURL = await getDownloadURL(uploadTask.snapshot.ref);
+      await addDoc(collection(db, 'content'), {
+        title: uploadTitle.value,
+        imageURL,
+        artistId: user.uid,
+        tags: uploadTags.value.split(',').map(tag => tag.trim()),
+        description: uploadDescription.value,
+        likes: 0,
+        comments: [],
+        createdAt: new Date()
+      });
 
-  alert('Image uploaded successfully!');
-  closeUploadModal();
-  search();
+      alert('Image uploaded successfully!');
+      closeUploadModal();
+      search();
+    }
+  );
 };
 
 const likeImage = async (imageId: string) => {
@@ -236,66 +247,21 @@ const followArtist = async (artistId: string) => {
 </script>
 
 <style scoped>
-/* Header and Content */
-ion-header {
-  --background: #1e88e5;
-  --color: white;
-}
-
-/* Search Bar */
-.search-bar ion-item {
-  border-radius: 12px;
-  margin: 10px;
-  --background: #f1f1f1;
-  --placeholder-color: #757575;
-}
-
-/* Cards */
 ion-card {
   margin: 10px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
 }
-ion-card:hover {
-  transform: scale(1.02);
-}
+
 ion-card img {
   width: 100%;
   height: auto;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
 }
 
-/* Card Titles and Buttons */
 ion-card-title {
   font-size: 16px;
   text-align: center;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.action-buttons {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 8px;
-}
-.action-buttons ion-button {
-  --border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
 }
 
-/* Modal */
-ion-modal {
-  --background: #ffffff;
-  padding: 20px;
-}
-ion-modal ion-item {
-  margin-bottom: 15px;
-}
-.file-input {
-  opacity: 1;
-  display: block;
-  cursor: pointer;
+ion-item {
+  margin: 10px;
 }
 </style>

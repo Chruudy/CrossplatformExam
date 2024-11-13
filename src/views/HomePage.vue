@@ -41,7 +41,14 @@ import { getUserProfile } from '../services/authentication';
 const db = getFirestore();
 
 const firstName = ref('');
-const followedImages = ref([]);
+interface Image {
+  id: string;
+  src: string;
+  alt: string;
+  title: string;
+}
+
+const followedImages = ref<Image[]>([]);
 
 const loadFollowedImages = async () => {
   const user = auth.currentUser;

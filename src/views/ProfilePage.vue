@@ -70,6 +70,7 @@ import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIte
 import { settings, close } from 'ionicons/icons';
 import { logoutUser, updateProfile, getUserProfile, uploadProfilePicture, getUserPosts } from '../services/authentication';
 import { auth } from '../services/firebase';
+import type { DocumentData } from 'firebase/firestore';
 
 const isEditMode = ref(false);
 const firstName = ref('');
@@ -79,7 +80,7 @@ const profilePicture = ref('');
 const followers = ref(0);
 const views = ref(0);
 const likes = ref(0);
-const posts = ref([]);
+const posts = ref<DocumentData[]>([]);
 
 const router = useRouter();
 
