@@ -26,15 +26,15 @@
         <div v-else>
           <img :src="profilePicture" alt="Profile Picture" id="profile-picture" />
           <div v-if="isEditMode" class="edit-mode">
-            <ion-item>
+            <ion-item class="form-item">
               <ion-label position="floating">First Name</ion-label>
               <ion-input v-model="firstName" type="text"></ion-input>
             </ion-item>
-            <ion-item>
+            <ion-item class="form-item">
               <ion-label position="floating">Last Name</ion-label>
               <ion-input v-model="lastName" type="text"></ion-input>
             </ion-item>
-            <ion-item>
+            <ion-item class="form-item">
               <ion-label position="floating">Display Name</ion-label>
               <ion-input v-model="displayNameWithoutAt" type="text"></ion-input>
             </ion-item>
@@ -54,14 +54,14 @@
                 <span>Followers</span>
               </div>
               <div class="stat">
-                <ion-icon name="eye-outline"></ion-icon>
-                <p>{{ views }}</p>
-                <span>Views</span>
+                <ion-icon name="heart-outline"></ion-icon>
+                <p>{{ totalLikes }}</p>
+                <span>Likes</span>
               </div>
               <div class="stat">
-                <ion-icon name="heart-outline"></ion-icon>
-                <p>{{ likes }}</p>
-                <span>Likes</span>
+                <ion-icon name="person-add-outline"></ion-icon>
+                <p>{{ following }}</p>
+                <span>Following</span>
               </div>
             </div>
             <ion-grid>
@@ -71,6 +71,7 @@
                     <img :src="post.imageURL" :alt="post.title" />
                     <ion-card-content>
                       <ion-card-title>{{ post.title }}</ion-card-title>
+                      <p>Likes: {{ post.likes }}</p>
                     </ion-card-content>
                   </ion-card>
                 </ion-col>
@@ -83,6 +84,7 @@
     </ion-content>
   </ion-page>
 </template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -93,7 +95,6 @@ import { logoutUser, updateProfile, getUserProfile, uploadProfilePicture, getUse
 import { auth } from '../services/firebase';
 import { getStorage, ref as firebaseStorageRef, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged } from 'firebase/auth';
-import type { DocumentData } from 'firebase/firestore';
 
 const isEditMode = ref(false);
 const firstName = ref('');
@@ -101,9 +102,9 @@ const lastName = ref('');
 const displayName = ref('');
 const profilePicture = ref('');
 const followers = ref(0);
-const views = ref(0);
-const likes = ref(0);
-const posts = ref<DocumentData[]>([]);
+const following = ref(0);
+const totalLikes = ref(0);
+const posts = ref<Array<{ imageURL: string; title: string; likes: number }>>([]);
 const isAnonymous = ref(false);
 
 const router = useRouter();
@@ -198,15 +199,23 @@ const loadUserProfile = async () => {
         lastName.value = profile.lastName;
         displayName.value = profile.displayName;
         followers.value = profile.followers || 0;
-        views.value = profile.views || 0;
-        likes.value = profile.likes || 0;
+        following.value = profile.following?.length || 0;
 
         // Fetch profile picture from Firebase Storage
         const profilePicRef = firebaseStorageRef(storage, `profilePictures/${user.uid}/profile.png`);
         profilePicture.value = await getDownloadURL(profilePicRef);
       }
+
+      // Fetch user posts and likes
       const userPosts = await getUserPosts();
-      posts.value = userPosts;
+      posts.value = userPosts.map(post => ({
+        imageURL: post.imageURL,
+        title: post.title,
+        likes: post.likes || 0 // Ensure likes are fetched and default to 0 if not present
+      }));
+
+      // Calculate total likes
+      totalLikes.value = posts.value.reduce((sum, post) => sum + post.likes, 0);
     }
   } catch (error) {
     console.error("Error loading user profile:", error);
@@ -229,6 +238,7 @@ onMounted(() => {
   });
 });
 </script>
+
 <style scoped>
 #profile-container {
   text-align: center;
@@ -295,8 +305,15 @@ h2 {
 
 ion-item {
   margin-bottom: 10px;
-  --background: #f1f1f1;
-  --placeholder-color: #757575;
+  --background: #f9f9f9;
+  --highlight-background: #e0e0e0;
+  border-radius: 8px;
+}
+
+ion-label {
+  --padding-start: 0px;
+  --padding-end: 0px;
+  --margin-top: -10px; /* Adjust this value to move the label higher */
 }
 
 ion-button {
@@ -306,15 +323,15 @@ ion-button {
 
 ion-card {
   margin: 10px;
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 ion-card img {
   width: 100%;
   height: auto;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
 }
 
 ion-card-title {

@@ -24,17 +24,17 @@
             <span>Followers</span>
           </div>
           <div class="stat">
-            <ion-icon name="eye-outline"></ion-icon>
-            <p>{{ views }}</p>
-            <span>Views</span>
-          </div>
-          <div class="stat">
             <ion-icon name="heart-outline"></ion-icon>
-            <p>{{ likes }}</p>
+            <p>{{ totalLikes }}</p>
             <span>Likes</span>
           </div>
+          <div class="stat">
+            <ion-icon name="person-add-outline"></ion-icon>
+            <p>{{ following }}</p>
+            <span>Following</span>
+          </div>
         </div>
-        <ion-button expand="block" color="primary" @click="followUser">Follow</ion-button>
+        <ion-button expand="block" color="primary" @click="toggleFollow">{{ isFollowing ? 'Unfollow' : 'Follow' }}</ion-button>
         <ion-grid>
           <ion-row>
             <ion-col size="6" size-md="4" v-for="(post, index) in posts" :key="index">
@@ -42,6 +42,7 @@
                 <img :src="post.imageURL" :alt="post.title" />
                 <ion-card-content>
                   <ion-card-title>{{ post.title }}</ion-card-title>
+                  <p>Likes: {{ post.likes }}</p>
                 </ion-card-content>
               </ion-card>
             </ion-col>
@@ -51,11 +52,12 @@
     </ion-content>
   </ion-page>
 </template>
+
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle, IonButton, IonIcon } from '@ionic/vue';
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getStorage, ref as firebaseStorageRef, getDownloadURL } from 'firebase/storage';
 import { app, auth } from '../services/firebase';
 
@@ -69,9 +71,10 @@ const lastName = ref('');
 const displayName = ref('');
 const profilePicture = ref('');
 const followers = ref(0);
-const views = ref(0);
-const likes = ref(0);
-const posts = ref<Array<{ imageURL: string; title: string }>>([]);
+const following = ref(0);
+const totalLikes = ref(0);
+const posts = ref<Array<{ imageURL: string; title: string; likes: number }>>([]);
+const isFollowing = ref(false);
 
 const loadUserProfile = async () => {
   try {
@@ -82,9 +85,17 @@ const loadUserProfile = async () => {
       firstName.value = profile.firstName;
       lastName.value = profile.lastName;
       displayName.value = profile.displayName;
-      followers.value = profile.followers || 0;
-      views.value = profile.views || 0;
-      likes.value = profile.likes || 0;
+      followers.value = profile.followers?.length || 0;
+      following.value = profile.following?.length || 0;
+
+      // Check if the current user is following this profile
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (currentUserDoc.exists()) {
+          isFollowing.value = currentUserDoc.data().following?.includes(userId) || false;
+        }
+      }
     }
 
     // Always fetch profile picture from Firebase Storage
@@ -94,13 +105,23 @@ const loadUserProfile = async () => {
 
     const postsQuery = query(collection(db, 'content'), where('artistId', '==', userId));
     const querySnapshot = await getDocs(postsQuery);
-    posts.value = querySnapshot.docs.map(doc => doc.data() as { imageURL: string; title: string });
+    posts.value = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        imageURL: data.imageURL,
+        title: data.title,
+        likes: data.likes || 0 // Ensure likes are fetched and default to 0 if not present
+      };
+    });
+
+    // Calculate total likes
+    totalLikes.value = posts.value.reduce((sum, post) => sum + post.likes, 0);
   } catch (error) {
     console.error('Error loading user profile:', error);
   }
 };
 
-const followUser = async () => {
+const toggleFollow = async () => {
   const user = auth.currentUser;
   if (!user) {
     alert('You must be logged in to follow users.');
@@ -108,14 +129,26 @@ const followUser = async () => {
   }
 
   const userDocRef = doc(db, 'users', user.uid);
-  await updateDoc(userDocRef, { following: arrayUnion(userId) });
-  alert('User followed!');
+  const profileDocRef = doc(db, 'users', userId);
+
+  if (isFollowing.value) {
+    await updateDoc(userDocRef, { following: arrayRemove(userId) });
+    await updateDoc(profileDocRef, { followers: arrayRemove(user.uid) });
+    followers.value--;
+  } else {
+    await updateDoc(userDocRef, { following: arrayUnion(userId) });
+    await updateDoc(profileDocRef, { followers: arrayUnion(user.uid) });
+    followers.value++;
+  }
+
+  isFollowing.value = !isFollowing.value;
 };
 
 const displayNameWithAt = computed(() => `@${displayName.value}`);
 
 onMounted(loadUserProfile);
 </script>
+
 <style scoped>
 #profile-container {
   text-align: center;

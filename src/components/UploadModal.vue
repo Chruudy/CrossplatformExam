@@ -1,65 +1,62 @@
 <template>
-  <ion-modal :is-open="isOpen" @didDismiss="closeModal">
+  <ion-modal :isOpen="isOpen" @didDismiss="closeModal">
     <ion-header>
       <ion-toolbar>
-        <ion-title>Upload Image</ion-title>
+        <ion-title>Upload Artwork</ion-title>
         <ion-buttons slot="end">
           <ion-button @click="closeModal">Close</ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
     <ion-content>
-      <ion-item>
-        <ion-label position="floating">Title</ion-label>
-        <ion-input v-model="uploadTitle" type="text"></ion-input>
-      </ion-item>
-      <ion-item>
-        <ion-label position="floating">Tags (comma-separated)</ion-label>
-        <ion-input v-model="uploadTags" type="text"></ion-input>
-      </ion-item>
-      <ion-item>
-        <ion-label position="floating">Description</ion-label>
-        <ion-textarea v-model="uploadDescription"></ion-textarea>
-      </ion-item>
-      <ion-item lines="none">
-        <ion-label position="stacked">Image</ion-label>
-        <input type="file" @change="handleFileChange" class="file-input" />
-      </ion-item>
-      <ion-button expand="block" @click="uploadImage">Upload</ion-button>
+      <div class="form-container">
+        <ion-item>
+          <ion-label position="floating">Title</ion-label>
+          <ion-input v-model="uploadTitle"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="floating">Description</ion-label>
+          <ion-input v-model="uploadDescription"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="floating">Tags</ion-label>
+          <ion-input v-model="uploadTags"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="floating">Exhibition Latitude</ion-label>
+          <ion-input v-model="exhibitionLat" type="number"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="floating">Exhibition Longitude</ion-label>
+          <ion-input v-model="exhibitionLng" type="number"></ion-input>
+        </ion-item>
+        <input type="file" @change="onFileChange" />
+        <ion-button expand="block" @click="uploadImage">Upload</ion-button>
+      </div>
     </ion-content>
   </ion-modal>
 </template>
+
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
+import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput } from '@ionic/vue';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { getFirestore, addDoc, collection } from 'firebase/firestore';
-import { app, auth } from '../services/firebase';
-import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonTextarea } from '@ionic/vue';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { auth } from '../services/firebase';
 
-const props = defineProps({
-  isOpen: Boolean,
-});
-
-const emit = defineEmits(['close', 'upload']);
-
+const isOpen = ref(false);
 const uploadTitle = ref('');
-const uploadTags = ref('');
 const uploadDescription = ref('');
-const uploadFile = ref<File | null>(null);
-
-const storage = getStorage(app);
-const db = getFirestore(app);
+const uploadTags = ref('');
+const exhibitionLat = ref(null);
+const exhibitionLng = ref(null);
+const uploadFile = ref(null);
 
 const closeModal = () => {
-  emit('close');
-  // Reset values
-  uploadTitle.value = '';
-  uploadTags.value = '';
-  uploadDescription.value = '';
-  uploadFile.value = null;
+  isOpen.value = false;
 };
 
-const handleFileChange = (event: Event) => {
+const onFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement;
   if (target.files && target.files[0]) {
     uploadFile.value = target.files[0];
@@ -67,7 +64,7 @@ const handleFileChange = (event: Event) => {
 };
 
 const uploadImage = async () => {
-  if (!uploadFile.value || !uploadTitle.value || !uploadTags.value || !uploadDescription.value) {
+  if (!uploadFile.value || !uploadTitle.value || !uploadDescription.value || !uploadTags.value || !exhibitionLat.value || !exhibitionLng.value) {
     alert('Please provide all required fields.');
     return;
   }
@@ -78,17 +75,9 @@ const uploadImage = async () => {
     return;
   }
 
-  const metadata = {
-    customMetadata: {
-      artistId: user.uid,
-      title: uploadTitle.value,
-      description: uploadDescription.value,
-      tags: uploadTags.value,
-    },
-  };
-
+  const storage = getStorage();
   const fileRef = storageRef(storage, `images/${user.uid}/${uploadFile.value.name}`);
-  const uploadTask = uploadBytesResumable(fileRef, uploadFile.value, metadata);
+  const uploadTask = uploadBytesResumable(fileRef, uploadFile.value);
 
   uploadTask.on('state_changed', (snapshot) => {
     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -98,30 +87,75 @@ const uploadImage = async () => {
     alert('Error uploading image: ' + error.message);
   }, async () => {
     const imageURL = await getDownloadURL(uploadTask.snapshot.ref);
-    const docRef = await addDoc(collection(db, 'content'), {
+    const db = getFirestore();
+    const docRef = doc(db, 'content', uploadFile.value.name);
+    await setDoc(docRef, {
       title: uploadTitle.value,
+      description: uploadDescription.value,
+      tags: uploadTags.value.split(',').map(tag => tag.trim()),
       imageURL,
       artistId: user.uid,
-      tags: uploadTags.value.split(',').map(tag => tag.trim()),
-      description: uploadDescription.value,
-      likes: 0,
-      comments: [],
+      exhibitionLat: parseFloat(exhibitionLat.value),
+      exhibitionLng: parseFloat(exhibitionLng.value),
       createdAt: new Date(),
     });
-    console.log('Document ID:', docRef.id); // Log the document ID
     alert('Image uploaded successfully!');
     closeModal();
-    emit('upload');
   });
+};
+</script>
+
+<style scoped>
+.form-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
-// Watch the isOpen prop to reset the form when the modal is opened
-watch(() => props.isOpen, (newVal) => {
-  if (newVal) {
-    uploadTitle.value = '';
-    uploadTags.value = '';
-    uploadDescription.value = '';
-    uploadFile.value = null;
-  }
-});
-</script>
+.form-item {
+  --background: #f9f9f9;
+  --highlight-background: #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.file-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.image-preview {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.image-preview img {
+  max-width: 50%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tags {
+  margin-top: 10px;
+}
+
+.tag {
+  display: inline-block;
+  background-color: #e0e0e0;
+  border-radius: 12px;
+  padding: 5px 10px;
+  margin: 5px;
+  font-size: 14px;
+}
+
+.upload-button {
+  margin-top: 20px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+</style>

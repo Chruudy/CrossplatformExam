@@ -36,7 +36,8 @@
       </div>
       <div v-if="showComments" class="comments-section">
         <div v-for="(comment, index) in comments" :key="index" class="comment">
-          <p><strong>{{ comment.userId }}</strong>: {{ comment.commentText }}</p>
+          <p><strong class="display-name">{{ comment.displayName }}</strong>: {{ comment.commentText }}</p>
+          <ion-button v-if="comment.userId === auth.currentUser?.uid" @click="deleteComment(index)">Delete</ion-button>
         </div>
         <ion-item>
           <ion-input v-model="newComment" placeholder="Add a comment..."></ion-input>
@@ -54,12 +55,13 @@
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { IonCard, IonCardContent, IonCardTitle, IonCardHeader, IonCardSubtitle, IonButton, IonIcon, IonItem, IonInput } from '@ionic/vue';
 import { heart, heartOutline, chatbubbleOutline, personAddOutline, language } from 'ionicons/icons';
 import { auth } from '../services/firebase';
-import { getFirestore, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, increment, getDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 const db = getFirestore();
 
@@ -76,6 +78,12 @@ interface Image {
   tags: string[];
 }
 
+interface Comment {
+  userId: string;
+  commentText: string;
+  displayName?: string;
+}
+
 const props = defineProps<{ image: Image }>();
 const emit = defineEmits(['like', 'comment', 'follow']);
 
@@ -83,7 +91,7 @@ const isLiked = ref(false);
 const showComments = ref(false);
 const newComment = ref('');
 const likes = ref(props.image.likes);
-const comments = ref([...props.image.comments]);
+const comments = ref<Comment[]>([]);
 const translatedDescription = ref('');
 const tags = ref([...props.image.tags]);
 const isModalOpen = ref(false);
@@ -92,12 +100,26 @@ watch(() => props.image.likes, (newLikes) => {
   likes.value = newLikes;
 });
 
-watch(() => props.image.comments, (newComments) => {
-  comments.value = [...newComments];
+watch(() => props.image.comments, async (newComments) => {
+  comments.value = await fetchCommentsWithDisplayNames(newComments);
 });
 
 watch(() => props.image.tags, (newTags) => {
   tags.value = [...newTags];
+});
+
+const fetchCommentsWithDisplayNames = async (comments: Array<{ userId: string; commentText: string }>): Promise<Comment[]> => {
+  const commentsWithDisplayNames: Comment[] = [];
+  for (const comment of comments) {
+    const userDoc = await getDoc(doc(db, 'users', comment.userId));
+    const displayName = userDoc.exists() ? userDoc.data().displayName : 'Unknown User';
+    commentsWithDisplayNames.push({ ...comment, displayName });
+  }
+  return commentsWithDisplayNames;
+};
+
+onMounted(async () => {
+  comments.value = await fetchCommentsWithDisplayNames(props.image.comments);
 });
 
 const toggleLike = async () => {
@@ -108,21 +130,38 @@ const toggleLike = async () => {
   }
 
   try {
-    console.log('Document ID:', props.image.id); // Log the document ID
     const imageDoc = doc(db, 'content', props.image.id);
     const docSnapshot = await getDoc(imageDoc);
+
+    // Check if the document exists
     if (!docSnapshot.exists()) {
       console.error('Document does not exist:', props.image.id);
-      throw new Error('Document does not exist');
+      return;
     }
 
-    isLiked.value = !isLiked.value;
-    if (isLiked.value) {
-      likes.value++;
-    } else {
+    // Document exists, proceed with like/unlike logic
+    const likedBy = docSnapshot.data().likedBy || [];
+    const userHasLiked = likedBy.includes(user.uid);
+
+    // Toggle like/unlike based on whether the user has already liked it
+    if (userHasLiked) {
+      // User has already liked, so we are unliking
+      await updateDoc(imageDoc, {
+        likes: increment(-1),
+        likedBy: arrayRemove(user.uid)
+      });
       likes.value--;
+      isLiked.value = false; // Set to false after unliking
+    } else {
+      // User hasn't liked yet, so we are liking
+      await updateDoc(imageDoc, {
+        likes: increment(1),
+        likedBy: arrayUnion(user.uid)
+      });
+      likes.value++;
+      isLiked.value = true; // Set to true after liking
     }
-    await updateDoc(imageDoc, { likes: increment(isLiked.value ? 1 : -1) });
+
     emit('like', props.image.id);
   } catch (error) {
     console.error('Error liking image:', error);
@@ -134,13 +173,41 @@ const toggleComments = () => {
   showComments.value = !showComments.value;
 };
 
-const addComment = () => {
+const addComment = async () => {
   if (newComment.value.trim()) {
-    const comment = { userId: 'currentUserId', commentText: newComment.value }; // Replace 'currentUserId' with the actual user ID
-    comments.value.push(comment);
+    const user = auth.currentUser;
+    if (!user) {
+      alert('You must be logged in to comment.');
+      return;
+    }
+
+    const comment = { userId: user.uid, commentText: newComment.value };
+    comments.value.push({ ...comment, displayName: user.displayName || 'Unknown User' });
+    await updateDoc(doc(db, 'content', props.image.id), {
+      comments: arrayUnion(comment)
+    });
     emit('comment', { imageId: props.image.id, commentText: newComment.value });
     newComment.value = '';
   }
+};
+
+const deleteComment = async (index: number) => {
+  const user = auth.currentUser;
+  if (!user) {
+    alert('You must be logged in to delete comments.');
+    return;
+  }
+
+  const comment = comments.value[index];
+  if (comment.userId !== user.uid) {
+    alert('You can only delete your own comments.');
+    return;
+  }
+
+  comments.value.splice(index, 1);
+  await updateDoc(doc(db, 'content', props.image.id), {
+    comments: comments.value
+  });
 };
 
 const emitFollow = () => {
@@ -149,7 +216,7 @@ const emitFollow = () => {
 
 const translateDescription = async () => {
   try {
-    const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=YOUR_API_KEY`, {
+    const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=AIzaSyABoN3EsB_jyScms9laVjpwoUeFre5jmhU`, {
       method: 'POST',
       body: JSON.stringify({
         q: props.image.description,
@@ -178,6 +245,7 @@ const closeModal = () => {
   isModalOpen.value = false;
 };
 </script>
+
 <style scoped>
 .image {
   cursor: pointer;
@@ -228,5 +296,9 @@ const closeModal = () => {
 
 .modal-image-container:hover .enlarged-image {
   transform: scale(1.05);
+}
+
+.display-name {
+  color: var(--ion-color-tertiary);
 }
 </style>

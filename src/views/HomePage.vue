@@ -13,7 +13,7 @@
       </ion-header>
       <div id="welcome-container">
         <h1>Welcome, {{ firstName }}!</h1>
-        <p>We're glad to have you here. Explore our app and enjoy the features we have to offer.</p>
+        <p>Explore our app and enjoy the features we have to offer.</p>
       </div>
       <div id="activity-container">
         <h2>Recent Activity</h2>
@@ -45,6 +45,7 @@
     </ion-content>
   </ion-page>
 </template>
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -76,36 +77,44 @@ const followedImages = ref<Image[]>([]);
 const recentActivities = ref<Activity[]>([]);
 
 const loadFollowedImages = async () => {
-  const user = auth.currentUser;
-  if (!user) return;
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User not authenticated');
 
-  const profile = await getUserProfile();
-  if (profile && profile.following && profile.following.length > 0) {
-    const followedUsers = profile.following;
-    const contentQuery = query(collection(db, 'content'), where('artistId', 'in', followedUsers), orderBy('createdAt', 'desc'), limit(10));
-    const querySnapshot = await getDocs(contentQuery);
-    followedImages.value = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      src: doc.data().imageURL,
-      alt: doc.data().title,
-      title: doc.data().title
-    }));
-  } else {
-    followedImages.value = []; // Clear the followed images if no followed users
+    const profile = await getUserProfile();
+    if (profile && profile.following && profile.following.length > 0) {
+      const followedUsers = profile.following;
+      const contentQuery = query(collection(db, 'content'), where('artistId', 'in', followedUsers), orderBy('createdAt', 'desc'), limit(10));
+      const querySnapshot = await getDocs(contentQuery);
+      followedImages.value = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        src: doc.data().imageURL,
+        alt: doc.data().title,
+        title: doc.data().title
+      }));
+    } else {
+      followedImages.value = []; // Clear the followed images if no followed users
+    }
+  } catch (error) {
+    console.error('Error loading followed images:', error);
   }
 };
 
 const loadRecentActivities = async () => {
-  const user = auth.currentUser;
-  if (!user) return;
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User not authenticated');
 
-  const activitiesQuery = query(collection(db, 'activities'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'), limit(10));
-  const querySnapshot = await getDocs(activitiesQuery);
-  recentActivities.value = querySnapshot.docs.map(doc => ({
-    icon: doc.data().type === 'like' ? heart : personAdd,
-    message: doc.data().message,
-    timestamp: new Date(doc.data().timestamp.toMillis()).toLocaleString()
-  }));
+    const activitiesQuery = query(collection(db, 'activities'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'), limit(10));
+    const querySnapshot = await getDocs(activitiesQuery);
+    recentActivities.value = querySnapshot.docs.map(doc => ({
+      icon: doc.data().type === 'like' ? heart : personAdd,
+      message: doc.data().message,
+      timestamp: new Date(doc.data().timestamp.toMillis()).toLocaleString()
+    }));
+  } catch (error) {
+    console.error('Error loading recent activities:', error);
+  }
 };
 
 const navigateToPost = (postId: string) => {
@@ -131,6 +140,7 @@ onMounted(() => {
   });
 });
 </script>
+
 <style scoped>
 /* Welcome Container Styling */
 #welcome-container {
@@ -138,20 +148,20 @@ onMounted(() => {
   padding: 20px;
   margin-top: 50px;
   color: #333;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: #f9f9f9;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
-  font-size: 32px;
-  margin-bottom: 20px;
+  font-size: 28px;
+  margin-bottom: 10px;
   color: #1e88e5;
 }
 
 p {
-  font-size: 18px;
-  color: #8c8c8c;
+  font-size: 16px;
+  color: #666;
 }
 
 /* Activity Container Styling */
@@ -159,12 +169,12 @@ p {
   padding: 20px;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
 }
 
 #activity-container h2 {
-  font-size: 24px;
+  font-size: 22px;
   color: #1e88e5;
   margin-bottom: 10px;
 }
@@ -195,12 +205,12 @@ ion-item p {
   padding: 20px;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
 }
 
 #showcase-container h2 {
-  font-size: 24px;
+  font-size: 22px;
   color: #1e88e5;
   margin-bottom: 10px;
 }
@@ -209,7 +219,7 @@ ion-item p {
 ion-card {
   margin: 10px;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s;
 }
 ion-card:hover {

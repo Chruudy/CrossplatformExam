@@ -1,2 +1,30 @@
 /* For information on how to create your own theme, please see:
 http://ionicframework.com/docs/theming/ */
+
+:root {
+  --background: #79444a;
+  --container-background: #c77b58;
+  --container-shadow: #ae5d40;
+  --text-color: #d1b187;
+
+  --primary-button: #b3a555;
+  --primary-button-shadow: #77743b;
+  --secondary-button: #8caba1;
+  --secondary-button-shadow: #4b726e;
+
+  --nav-bar-background: #574852;
+  --nav-bar-text: #ab9b8e;
+
+  --form-item-background: #f9f9f9;
+  --highlight-background: #e0e0e0;
+  --ion-item-background: #ffffff;
+  --register-page-background: #f0f2f5;
+  --ion-list-background: #fff;
+  --border-color: #e0e0e0;
+
+  --info-text-color: #757575;
+  --stat-span-color: #757575;
+  --ion-item-h3-color: #333;
+  --stat-ion-icon-color: #1e88e5;
+  --showcase-container-h2-color: #1e88e5;
+}

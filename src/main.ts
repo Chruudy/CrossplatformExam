@@ -25,13 +25,13 @@ import './theme/variables.css';
 
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
 import { addIcons } from 'ionicons';
-import { peopleOutline, eyeOutline, heartOutline } from 'ionicons/icons';
+import { peopleOutline, heartOutline, personAddOutline } from 'ionicons/icons';
 
 // Register the icons
 addIcons({
   'people-outline': peopleOutline,
-  'eye-outline': eyeOutline,
-  'heart-outline': heartOutline
+  'heart-outline': heartOutline,
+  'person-add-outline': personAddOutline
 });
 
 const app = createApp(App)

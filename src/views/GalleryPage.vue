@@ -31,12 +31,14 @@
       <!-- Filters and Tags -->
       <div class="filter-tags-container">
         <ion-select placeholder="Sort By" @ionChange="applyFilter($event.detail.value)">
+          <ion-select-option value="">None</ion-select-option>
           <ion-select-option value="mostLiked">Most Liked</ion-select-option>
           <ion-select-option value="aToZ">A-Z</ion-select-option>
           <ion-select-option value="newest">Newest</ion-select-option>
           <ion-select-option value="oldest">Oldest</ion-select-option>
         </ion-select>
         <ion-select placeholder="Tags" @ionChange="applyFilter($event.detail.value)">
+          <ion-select-option value="">None</ion-select-option>
           <ion-select-option v-for="tag in availableTags" :key="tag" :value="tag">
             {{ tag }}
           </ion-select-option>
@@ -52,7 +54,6 @@
           @like="likeImage"
           @comment="commentImage"
           @follow="followArtist"
-          :id="image.id"
         />
       </div>
 
@@ -65,6 +66,7 @@
     </ion-content>
   </ion-page>
 </template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
@@ -87,7 +89,8 @@ const isUploadModalOpen = ref(false); // Modal state
 const suggestedUsers = ref<Array<{ displayName: string }>>([]);
 const showSuggestions = ref(false);
 const availableTags = ref<string[]>([]); // Available tags for filtering
-const currentFilter = ref<string>(''); // Current filter
+const selectedSort = ref<string>(''); // Selected sort option
+const selectedTag = ref<string>(''); // Selected tag option
 const isModalOpen = ref(false);
 const modalImage = ref<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string } | null>(null);
 
@@ -140,9 +143,10 @@ const fetchImages = async () => {
   }
 };
 
-// Filtered Images based on search query and current filter
+// Filtered Images based on search query, selected sort, and selected tag
 const filteredImages = computed(() => {
   let sortedImages = [...images.value]; // Create a copy to avoid mutation
+
   if (searchQuery.value) {
     const searchTerms = searchQuery.value.toLowerCase().split(',').map(term => term.trim());
     sortedImages = sortedImages.filter(image => {
@@ -155,8 +159,12 @@ const filteredImages = computed(() => {
     });
   }
 
-  if (currentFilter.value) {
-    switch (currentFilter.value) {
+  if (selectedTag.value) {
+    sortedImages = sortedImages.filter(image => image.tags.includes(selectedTag.value));
+  }
+
+  if (selectedSort.value) {
+    switch (selectedSort.value) {
       case 'mostLiked':
         sortedImages.sort((a, b) => b.likes - a.likes);
         break;
@@ -168,9 +176,6 @@ const filteredImages = computed(() => {
         break;
       case 'oldest':
         sortedImages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        break;
-      default:
-        sortedImages = sortedImages.filter(image => image.tags.includes(currentFilter.value));
         break;
     }
   }
@@ -208,8 +213,8 @@ const openUploadModal = () => { isUploadModalOpen.value = true; };
 const closeUploadModal = () => { isUploadModalOpen.value = false; };
 
 // Apply Filter
-const applyFilter = (filter: string) => {
-  currentFilter.value = filter;
+const applyFilter = () => {
+  // This function is intentionally left empty as the filtering is handled by the computed property
 };
 
 // Like Image Functionality
@@ -271,33 +276,6 @@ onMounted(async () => {
   }
 });
 </script>
-<style scoped>
-.image-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 16px;
-}
-
-.search-bar-container {
-  padding: 16px;
-}
-
-.filter-tags-container {
-  display: flex;
-  justify-content: center; /* Center the dropdowns horizontally */
-  align-items: center; /* Center the dropdowns vertically */
-  padding: 16px;
-  margin-left: 25%;
-  gap: 16px;
-  margin-right: 25%;
-}
-
-ion-select {
-  width: 45%;
-  z-index: 1000; /* Ensure the dropdown is above other elements */
-}
-</style>
 
 <style scoped>
 .image-grid {
