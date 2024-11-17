@@ -7,7 +7,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 export const uploadProfilePicture = async (userId: string, imageDataUrl: string) => {
-  const storageRef = ref(storage, `profilePictures/${userId}`);
+  const fileName = 'profile.png';
+  const storageRef = ref(storage, `profilePictures/${userId}/${fileName}`);
   await uploadString(storageRef, imageDataUrl, 'data_url');
   return await getDownloadURL(storageRef);
 };

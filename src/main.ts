@@ -20,20 +20,19 @@ import '@ionic/vue/css/text-transformation.css';
 import '@ionic/vue/css/flex-utils.css';
 import '@ionic/vue/css/display.css';
 
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
- */
-
-/* @import '@ionic/vue/css/palettes/dark.always.css'; */
-/* @import '@ionic/vue/css/palettes/dark.class.css'; */
-
 /* Theme variables */
 import './theme/variables.css';
 
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
+import { addIcons } from 'ionicons';
+import { peopleOutline, eyeOutline, heartOutline } from 'ionicons/icons';
+
+// Register the icons
+addIcons({
+  'people-outline': peopleOutline,
+  'eye-outline': eyeOutline,
+  'heart-outline': heartOutline
+});
 
 const app = createApp(App)
   app.use(IonicVue)

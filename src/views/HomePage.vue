@@ -15,30 +15,48 @@
         <h1>Welcome, {{ firstName }}!</h1>
         <p>We're glad to have you here. Explore our app and enjoy the features we have to offer.</p>
       </div>
-      <ion-grid>
-        <ion-row>
-          <ion-col size="6" size-md="4" v-for="(image, index) in followedImages" :key="index">
-            <ion-card>
-              <img :src="image.src" :alt="image.alt" />
-              <ion-card-content>
-                <ion-card-title>{{ image.title }}</ion-card-title>
-              </ion-card-content>
-            </ion-card>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
+      <div id="activity-container">
+        <h2>Recent Activity</h2>
+        <ion-list>
+          <ion-item v-for="(activity, index) in recentActivities" :key="index">
+            <ion-icon :icon="activity.icon" slot="start"></ion-icon>
+            <ion-label>
+              <h3>{{ activity.message }}</h3>
+              <p>{{ activity.timestamp }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </div>
+      <div id="showcase-container">
+        <h2>Recent Posts from Followed Users</h2>
+        <ion-grid>
+          <ion-row>
+            <ion-col size="12" size-md="6" size-lg="4" v-for="(image, index) in followedImages" :key="index">
+              <ion-card @click="navigateToPost(image.id)">
+                <img :src="image.src" :alt="image.alt" />
+                <ion-card-content>
+                  <ion-card-title>{{ image.title }}</ion-card-title>
+                </ion-card-content>
+              </ion-card>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </div>
     </ion-content>
   </ion-page>
 </template>
-
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle } from '@ionic/vue';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { useRouter } from 'vue-router';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle, IonList, IonItem, IonLabel, IonIcon } from '@ionic/vue';
+import { getFirestore, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { auth } from '../services/firebase';
 import { getUserProfile } from '../services/authentication';
+import { heart, personAdd } from 'ionicons/icons';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const db = getFirestore();
+const router = useRouter();
 
 const firstName = ref('');
 interface Image {
@@ -48,16 +66,23 @@ interface Image {
   title: string;
 }
 
+interface Activity {
+  icon: string;
+  message: string;
+  timestamp: string;
+}
+
 const followedImages = ref<Image[]>([]);
+const recentActivities = ref<Activity[]>([]);
 
 const loadFollowedImages = async () => {
   const user = auth.currentUser;
   if (!user) return;
 
   const profile = await getUserProfile();
-  if (profile && profile.following) {
+  if (profile && profile.following && profile.following.length > 0) {
     const followedUsers = profile.following;
-    const contentQuery = query(collection(db, 'content'), where('artistId', 'in', followedUsers));
+    const contentQuery = query(collection(db, 'content'), where('artistId', 'in', followedUsers), orderBy('createdAt', 'desc'), limit(10));
     const querySnapshot = await getDocs(contentQuery);
     followedImages.value = querySnapshot.docs.map(doc => ({
       id: doc.id,
@@ -65,22 +90,47 @@ const loadFollowedImages = async () => {
       alt: doc.data().title,
       title: doc.data().title
     }));
+  } else {
+    followedImages.value = []; // Clear the followed images if no followed users
   }
 };
 
-onMounted(async () => {
-  try {
-    const profile = await getUserProfile();
-    if (profile) {
-      firstName.value = profile.firstName;
+const loadRecentActivities = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const activitiesQuery = query(collection(db, 'activities'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'), limit(10));
+  const querySnapshot = await getDocs(activitiesQuery);
+  recentActivities.value = querySnapshot.docs.map(doc => ({
+    icon: doc.data().type === 'like' ? heart : personAdd,
+    message: doc.data().message,
+    timestamp: new Date(doc.data().timestamp.toMillis()).toLocaleString()
+  }));
+};
+
+const navigateToPost = (postId: string) => {
+  router.push({ path: '/page/gallery', query: { postId } });
+};
+
+onMounted(() => {
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
+        const profile = await getUserProfile();
+        if (profile) {
+          firstName.value = profile.firstName;
+        }
+        await loadFollowedImages();
+        await loadRecentActivities();
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+      }
+    } else {
+      console.error("No user is currently signed in.");
     }
-    await loadFollowedImages();
-  } catch (error) {
-    console.error("Error loading user profile:", error);
-  }
+  });
 });
 </script>
-
 <style scoped>
 /* Welcome Container Styling */
 #welcome-container {
@@ -88,10 +138,13 @@ onMounted(async () => {
   padding: 20px;
   margin-top: 50px;
   color: #333;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
-  font-size: 28px;
+  font-size: 32px;
   margin-bottom: 20px;
   color: #1e88e5;
 }
@@ -99,6 +152,57 @@ h1 {
 p {
   font-size: 18px;
   color: #8c8c8c;
+}
+
+/* Activity Container Styling */
+#activity-container {
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+#activity-container h2 {
+  font-size: 24px;
+  color: #1e88e5;
+  margin-bottom: 10px;
+}
+
+ion-list {
+  background: #fff;
+  border-radius: 8px;
+}
+
+ion-item {
+  --background: #f9f9f9;
+  --border-color: #e0e0e0;
+  margin-bottom: 10px;
+}
+
+ion-item h3 {
+  font-size: 16px;
+  color: #333;
+}
+
+ion-item p {
+  font-size: 14px;
+  color: #757575;
+}
+
+/* Showcase Container Styling */
+#showcase-container {
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+#showcase-container h2 {
+  font-size: 24px;
+  color: #1e88e5;
+  margin-bottom: 10px;
 }
 
 /* Card Styling */

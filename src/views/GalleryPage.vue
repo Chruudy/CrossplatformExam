@@ -1,5 +1,6 @@
 <template>
   <ion-page>
+    <!-- Header -->
     <ion-header :translucent="true">
       <ion-toolbar color="primary">
         <ion-title>Gallery</ion-title>
@@ -9,6 +10,7 @@
       </ion-toolbar>
     </ion-header>
 
+    <!-- Content -->
     <ion-content :fullscreen="true">
       <ion-header collapse="condense">
         <ion-toolbar>
@@ -16,183 +18,201 @@
         </ion-toolbar>
       </ion-header>
 
-      <div class="search-bar">
-        <ion-item>
-          <ion-label position="floating">Search</ion-label>
-          <ion-input v-model="searchQuery" @ionInput="search" type="text" placeholder="Search by title or artist..."></ion-input>
-        </ion-item>
+      <!-- Search Bar -->
+      <div class="search-bar-container">
+        <SearchBar 
+          :suggestedUsers="suggestedUsers"
+          v-model:searchQuery="searchQuery"
+          @search="search"
+          @selectUser="selectUser"
+        />
       </div>
 
-      <ion-list v-if="showSuggestions">
-        <ion-item v-for="(user, index) in suggestedUsers" :key="index" @click="selectUser(user)">
-          {{ user.displayName }}
-        </ion-item>
-      </ion-list>
+      <!-- Filters and Tags -->
+      <div class="filter-tags-container">
+        <ion-select placeholder="Sort By" @ionChange="applyFilter($event.detail.value)">
+          <ion-select-option value="mostLiked">Most Liked</ion-select-option>
+          <ion-select-option value="aToZ">A-Z</ion-select-option>
+          <ion-select-option value="newest">Newest</ion-select-option>
+          <ion-select-option value="oldest">Oldest</ion-select-option>
+        </ion-select>
+        <ion-select placeholder="Tags" @ionChange="applyFilter($event.detail.value)">
+          <ion-select-option v-for="tag in availableTags" :key="tag" :value="tag">
+            {{ tag }}
+          </ion-select-option>
+        </ion-select>
+      </div>
 
-      <ion-grid>
-        <ion-row>
-          <ion-col size="6" size-md="4" v-for="(image, index) in filteredImages" :key="index">
-            <ion-card>
-              <img :src="image.src" :alt="image.alt" />
-              <ion-card-content>
-                <ion-card-title>{{ image.title }}</ion-card-title>
-                <div class="action-buttons">
-                  <ion-button color="primary" fill="outline" size="small" @click="likeImage(image.id)">Like</ion-button>
-                  <ion-button color="secondary" fill="outline" size="small" @click="commentImage(image.id)">Comment</ion-button>
-                  <ion-button color="tertiary" fill="outline" size="small" @click="followArtist(image.artistId)">Follow</ion-button>
-                </div>
-              </ion-card-content>
-            </ion-card>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
+      <!-- Image Grid -->
+      <div class="image-grid">
+        <ImageCard 
+          v-for="image in filteredImages" 
+          :key="image.id"
+          :image="image"
+          @like="likeImage"
+          @comment="commentImage"
+          @follow="followArtist"
+          :id="image.id"
+        />
+      </div>
 
-      <ion-modal :is-open="isUploadModalOpen" @didDismiss="closeUploadModal">
-        <ion-header>
-          <ion-toolbar>
-            <ion-title>Upload Image</ion-title>
-            <ion-buttons slot="end">
-              <ion-button @click="closeUploadModal">Close</ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content>
-          <ion-item>
-            <ion-label position="floating">Title</ion-label>
-            <ion-input v-model="uploadTitle" type="text"></ion-input>
-          </ion-item>
-          <ion-item>
-            <ion-label position="floating">Tags (comma-separated)</ion-label>
-            <ion-input v-model="uploadTags" type="text"></ion-input>
-          </ion-item>
-          <ion-item>
-            <ion-label position="floating">Description</ion-label>
-            <ion-textarea v-model="uploadDescription"></ion-textarea>
-          </ion-item>
-          <ion-item lines="none">
-            <ion-label position="stacked">Image</ion-label>
-            <input type="file" @change="handleFileChange" class="file-input" />
-          </ion-item>
-          <ion-button expand="block" @click="uploadImage">Upload</ion-button>
-        </ion-content>
-      </ion-modal>
+      <!-- Upload Modal Component -->
+      <UploadModal 
+        :isOpen="isUploadModalOpen" 
+        @close="closeUploadModal"
+        @upload="fetchImages"
+      />
     </ion-content>
   </ion-page>
 </template>
-
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle, IonItem, IonLabel, IonInput, IonButton, IonModal, IonButtons, IonList, IonTextarea } from '@ionic/vue';
-import { getFirestore, collection, query, where, getDocs, addDoc, updateDoc, doc, increment, arrayUnion, orderBy, limit } from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonButtons, IonSelect, IonSelectOption } from '@ionic/vue';
+import { getFirestore, collection, query, where, getDocs, getDoc, updateDoc, doc, increment, arrayUnion, limit, orderBy } from 'firebase/firestore';
+import { getStorage, ref as storageRef, listAll, getDownloadURL, getMetadata } from 'firebase/storage';
 import { app, auth } from '../services/firebase';
+import SearchBar from '../components/SearchBar.vue';
+import ImageCard from '../components/ImageCards.vue';
+import UploadModal from '../components/UploadModal.vue';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
+const route = useRoute();
 
-const searchQuery = ref<string>('');
-const images = ref<Array<{ id: string; src: string; alt: string; title: string; artistId: string }>>([]);
-const isUploadModalOpen = ref(false);
-const uploadTitle = ref<string>('');
-const uploadTags = ref<string>('');
-const uploadDescription = ref<string>('');
-const uploadFile = ref<File | null>(null);
+// Reactive State
+const searchQuery = ref<string>(''); // Search query
+const images = ref<Array<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string }>>([]); // Images array
+const isUploadModalOpen = ref(false); // Modal state
 const suggestedUsers = ref<Array<{ displayName: string }>>([]);
 const showSuggestions = ref(false);
+const availableTags = ref<string[]>([]); // Available tags for filtering
+const currentFilter = ref<string>(''); // Current filter
+const isModalOpen = ref(false);
+const modalImage = ref<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string } | null>(null);
 
+// Fetch Images from Firebase Storage
+const fetchImages = async () => {
+  try {
+    const imagesRef = storageRef(storage, 'images');
+    const imagesList = await listAll(imagesRef);
+    const imagePromises = imagesList.prefixes.map(async (folderRef) => {
+      const folderList = await listAll(folderRef);
+      const itemPromises = folderList.items.map(async (itemRef) => {
+        const imageURL = await getDownloadURL(itemRef);
+        const metadata = await getMetadata(itemRef);
+        const artistId = metadata.customMetadata?.artistId || 'Unknown';
+        let artistName = 'Unknown Artist';
+        if (artistId !== 'Unknown') {
+          const artistDoc = await getDoc(doc(db, `users/${artistId}`));
+          artistName = artistDoc.exists() ? artistDoc.data().displayName : 'Unknown Artist';
+        }
+        const tags = metadata.customMetadata?.tags ? metadata.customMetadata.tags.split(',').map(tag => tag.trim()) : [];
+        tags.forEach(tag => {
+          if (!availableTags.value.includes(tag)) {
+            availableTags.value.push(tag);
+          }
+        });
+        const docRef = await getDoc(doc(db, 'content', itemRef.name));
+        const docData = docRef.data();
+        return {
+          id: docRef.id,
+          src: imageURL,
+          title: metadata.customMetadata?.title || 'Untitled',
+          artistId,
+          artistName,
+          description: metadata.customMetadata?.description || '',
+          likes: docData?.likes || 0,
+          comments: docData?.comments || [],
+          tags,
+          alt: metadata.customMetadata?.title || 'Untitled',
+          createdAt: metadata.timeCreated || new Date().toISOString()
+        };
+      });
+      return Promise.all(itemPromises);
+    });
+    const resolvedImagePromises = await Promise.all(imagePromises);
+    images.value = resolvedImagePromises.flat();
+    availableTags.value.sort(); // Sort tags alphabetically
+    console.log('Fetched images:', images.value);
+  } catch (error) {
+    console.error('Error fetching images:', error);
+  }
+};
+
+// Filtered Images based on search query and current filter
 const filteredImages = computed(() => {
-  return images.value.filter(image => image.title.toLowerCase().includes(searchQuery.value.toLowerCase()));
+  let sortedImages = [...images.value]; // Create a copy to avoid mutation
+  if (searchQuery.value) {
+    const searchTerms = searchQuery.value.toLowerCase().split(',').map(term => term.trim());
+    sortedImages = sortedImages.filter(image => {
+      return searchTerms.every(term => 
+        image.title.toLowerCase().includes(term) ||
+        image.artistName.toLowerCase().includes(term) ||
+        image.description.toLowerCase().includes(term) ||
+        image.tags.some(tag => tag.toLowerCase().includes(term))
+      );
+    });
+  }
+
+  if (currentFilter.value) {
+    switch (currentFilter.value) {
+      case 'mostLiked':
+        sortedImages.sort((a, b) => b.likes - a.likes);
+        break;
+      case 'aToZ':
+        sortedImages.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'newest':
+        sortedImages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case 'oldest':
+        sortedImages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        break;
+      default:
+        sortedImages = sortedImages.filter(image => image.tags.includes(currentFilter.value));
+        break;
+    }
+  }
+
+  return sortedImages;
 });
 
-const search = async () => {
-  if (searchQuery.value.startsWith('@')) {
+// Search Functionality
+const search = async (searchTerm: string) => {
+  searchQuery.value = searchTerm;
+  if (searchTerm.startsWith('@')) {
     showSuggestions.value = true;
-    const artistQuery = query(collection(db, 'users'), where('displayName', '>=', searchQuery.value.slice(1)), orderBy('displayName'), limit(5));
+    const artistQuery = query(
+      collection(db, 'users'),
+      where('displayName', '>=', searchTerm.slice(1)),
+      orderBy('displayName'),
+      limit(5)
+    );
     const querySnapshot = await getDocs(artistQuery);
     suggestedUsers.value = querySnapshot.docs.map(doc => doc.data() as { displayName: string });
   } else {
     showSuggestions.value = false;
-    const contentQuery = query(collection(db, 'content'), where('title', '>=', searchQuery.value), where('title', '<=', searchQuery.value + '\uf8ff'));
-    const querySnapshot = await getDocs(contentQuery);
-    images.value = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      src: doc.data().imageURL,
-      alt: doc.data().title,
-      title: doc.data().title,
-      artistId: doc.data().artistId
-    }));
   }
 };
 
+// Select User Functionality (for search suggestions)
 const selectUser = (user: { displayName: string }) => {
   searchQuery.value = `@${user.displayName}`;
   showSuggestions.value = false;
-  search();
+  search(searchQuery.value);
 };
 
-const openUploadModal = () => {
-  isUploadModalOpen.value = true;
+// Open and Close Modals
+const openUploadModal = () => { isUploadModalOpen.value = true; };
+const closeUploadModal = () => { isUploadModalOpen.value = false; };
+
+// Apply Filter
+const applyFilter = (filter: string) => {
+  currentFilter.value = filter;
 };
 
-const closeUploadModal = () => {
-  isUploadModalOpen.value = false;
-  uploadTitle.value = '';
-  uploadTags.value = '';
-  uploadDescription.value = '';
-  uploadFile.value = null;
-};
-
-const handleFileChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (target.files && target.files[0]) {
-    uploadFile.value = target.files[0];
-  }
-};
-
-const uploadImage = async () => {
-  if (!uploadFile.value || !uploadTitle.value || !uploadTags.value || !uploadDescription.value) {
-    alert('Please provide all required fields (title, tags, description, and image).');
-    return;
-  }
-
-  const user = auth.currentUser;
-  if (!user) {
-    alert('You must be logged in to upload images.');
-    return;
-  }
-
-  const fileRef = storageRef(storage, `images/${user.uid}/${uploadFile.value.name}`);
-  const uploadTask = uploadBytesResumable(fileRef, uploadFile.value);
-
-  uploadTask.on('state_changed', 
-    (snapshot) => {
-      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-      console.log('Upload is ' + progress + '% done');
-    }, 
-    (error) => {
-      console.error('Upload failed:', error);
-      alert('Error uploading image: ' + error.message);
-    }, 
-    async () => {
-      const imageURL = await getDownloadURL(uploadTask.snapshot.ref);
-      await addDoc(collection(db, 'content'), {
-        title: uploadTitle.value,
-        imageURL,
-        artistId: user.uid,
-        tags: uploadTags.value.split(',').map(tag => tag.trim()),
-        description: uploadDescription.value,
-        likes: 0,
-        comments: [],
-        createdAt: new Date()
-      });
-
-      alert('Image uploaded successfully!');
-      closeUploadModal();
-      search();
-    }
-  );
-};
-
+// Like Image Functionality
 const likeImage = async (imageId: string) => {
   const user = auth.currentUser;
   if (!user) {
@@ -201,35 +221,24 @@ const likeImage = async (imageId: string) => {
   }
 
   const imageDoc = doc(db, 'content', imageId);
-  await updateDoc(imageDoc, {
-    likes: increment(1)
-  });
-
+  await updateDoc(imageDoc, { likes: increment(1) });
   alert('Image liked!');
-  search();
 };
 
-const commentImage = async (imageId: string) => {
+// Comment on Image Functionality
+const commentImage = async ({ imageId, commentText }: { imageId: string; commentText: string }) => {
   const user = auth.currentUser;
   if (!user) {
     alert('You must be logged in to comment on images.');
     return;
   }
 
-  const comment = prompt('Enter your comment:');
-  if (!comment) {
-    return;
-  }
-
   const imageDoc = doc(db, 'content', imageId);
-  await updateDoc(imageDoc, {
-    comments: arrayUnion({ userId: user.uid, comment, createdAt: new Date() })
-  });
-
+  await updateDoc(imageDoc, { comments: arrayUnion({ userId: user.uid, commentText }) });
   alert('Comment added!');
-  search();
 };
 
+// Follow Artist Functionality
 const followArtist = async (artistId: string) => {
   const user = auth.currentUser;
   if (!user) {
@@ -237,31 +246,83 @@ const followArtist = async (artistId: string) => {
     return;
   }
 
-  const userDoc = doc(db, 'users', user.uid);
-  await updateDoc(userDoc, {
-    following: arrayUnion(artistId)
-  });
-
+  const userDocRef = doc(db, 'users', user.uid);
+  await updateDoc(userDocRef, { following: arrayUnion(artistId) });
   alert('Artist followed!');
 };
+
+// Fetch images on component mount
+onMounted(async () => {
+  await fetchImages();
+  const postId = route.query.postId as string;
+  const openModal = route.query.openModal === 'true';
+  if (postId) {
+    const postElement = document.getElementById(postId);
+    if (postElement) {
+      postElement.scrollIntoView({ behavior: 'smooth' });
+    }
+    if (openModal) {
+      const image = images.value.find(img => img.id === postId);
+      if (image) {
+        modalImage.value = image;
+        isModalOpen.value = true;
+      }
+    }
+  }
+});
 </script>
+<style scoped>
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.search-bar-container {
+  padding: 16px;
+}
+
+.filter-tags-container {
+  display: flex;
+  justify-content: center; /* Center the dropdowns horizontally */
+  align-items: center; /* Center the dropdowns vertically */
+  padding: 16px;
+  margin-left: 25%;
+  gap: 16px;
+  margin-right: 25%;
+}
+
+ion-select {
+  width: 45%;
+  z-index: 1000; /* Ensure the dropdown is above other elements */
+}
+</style>
 
 <style scoped>
-ion-card {
-  margin: 10px;
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 16px;
 }
 
-ion-card img {
-  width: 100%;
-  height: auto;
+.search-bar-container {
+  padding: 16px;
 }
 
-ion-card-title {
-  font-size: 16px;
-  text-align: center;
+.filter-tags-container {
+  display: flex;
+  justify-content: center; /* Center the dropdowns horizontally */
+  align-items: center; /* Center the dropdowns vertically */
+  padding: 16px;
+  margin-left: 25%;
+  gap: 16px;
+  margin-right: 25%;
 }
 
-ion-item {
-  margin: 10px;
+ion-select {
+  width: 45%;
+  z-index: 1000; /* Ensure the dropdown is above other elements */
 }
 </style>
