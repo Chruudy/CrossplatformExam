@@ -1,7 +1,7 @@
 <template>
   <ion-page>
     <!-- Header -->
-    <ion-header :translucent="true">
+    <ion-header>
       <ion-toolbar color="primary">
         <ion-title>Gallery</ion-title>
         <ion-buttons slot="end">
@@ -12,13 +12,6 @@
 
     <!-- Content -->
     <ion-content :fullscreen="true">
-      <ion-header collapse="condense">
-        <ion-toolbar>
-          <ion-title size="large">Gallery</ion-title>
-        </ion-toolbar>
-      </ion-header>
-
-      <!-- Search Bar -->
       <div class="search-bar-container">
         <SearchBar 
           :suggestedUsers="suggestedUsers"

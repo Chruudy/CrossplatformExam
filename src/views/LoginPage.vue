@@ -1,33 +1,37 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header>
       <ion-toolbar color="primary">
         <ion-title>Login</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content :fullscreen="true">
-      <ion-header collapse="condense">
-        <ion-toolbar>
-          <ion-title size="large">Login</ion-title>
-        </ion-toolbar>
-      </ion-header>
-
       <div id="login-container">
         <ion-card>
           <ion-card-content>
             <ion-item>
-              <ion-label position="floating">Username</ion-label>
-              <ion-input v-model="username" type="text"></ion-input>
+              <ion-icon slot="start" name="person-circle-outline"></ion-icon>
+              <ion-input v-model="username" type="text" placeholder="Username"></ion-input>
             </ion-item>
             <ion-item>
-              <ion-label position="floating">Password</ion-label>
-              <ion-input v-model="password" type="password"></ion-input>
+              <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+              <ion-input v-model="password" type="password" placeholder="Password"></ion-input>
             </ion-item>
-            <ion-button expand="block" color="primary" @click="login">Login</ion-button>
-            <ion-button expand="block" color="danger" @click="loginWithGoogle">Login with Google</ion-button>
-            <ion-button expand="block" color="medium" @click="loginAnonymously">Login Anonymously</ion-button>
+            <ion-button expand="block" color="primary" @click="login">
+              <ion-icon slot="start" name="log-in-outline"></ion-icon>
+              Login
+            </ion-button>
+            <ion-button expand="block" color="danger" @click="loginWithGoogle">
+              <ion-icon slot="start" name="logo-google"></ion-icon>
+              Login with Google
+            </ion-button>
+            <ion-button expand="block" color="medium" @click="loginAnonymously">
+              <ion-icon slot="start" name="person-outline"></ion-icon>
+              Login Anonymously
+            </ion-button>
             <ion-button expand="block" fill="clear" color="dark" @click="navigateToRegister">
+              <ion-icon slot="start" name="person-add-outline"></ion-icon>
               Don't have an account? Register here
             </ion-button>
           </ion-card-content>
@@ -40,7 +44,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonCard, IonCardContent, IonItem, IonLabel, IonInput, IonButton } from '@ionic/vue';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonCard, IonCardContent, IonItem, IonInput, IonButton, IonIcon } from '@ionic/vue';
 import { signInWithEmail, signInWithGoogle, signInAnonymouslyUser } from '../services/authentication';
 
 const username = ref('');
@@ -96,7 +100,7 @@ const navigateToRegister = () => {
   align-items: center;
   height: 100%;
   padding: 20px;
-  background: #f0f2f5;
+  background: #ffffff;
 }
 
 ion-card {
@@ -105,6 +109,7 @@ ion-card {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   transition: transform 0.2s;
+  background: #ffffff;
 }
 
 ion-card:hover {
@@ -126,5 +131,9 @@ ion-button {
 
 ion-button[fill="clear"] {
   color: #1e88e5;
+}
+
+ion-icon {
+  margin-right: 8px;
 }
 </style>

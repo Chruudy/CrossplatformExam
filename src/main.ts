@@ -25,13 +25,18 @@ import './theme/variables.css';
 
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
 import { addIcons } from 'ionicons';
-import { peopleOutline, heartOutline, personAddOutline } from 'ionicons/icons';
+import { peopleOutline, heartOutline, personAddOutline, personCircleOutline, logInOutline, lockClosedOutline, logoGoogle, personOutline } from 'ionicons/icons';
 
 // Register the icons
 addIcons({
   'people-outline': peopleOutline,
   'heart-outline': heartOutline,
-  'person-add-outline': personAddOutline
+  'person-add-outline': personAddOutline,
+  'person-circle-outline': personCircleOutline,
+  'log-in-outline': logInOutline,
+  'lock-closed-outline': lockClosedOutline,
+  'logo-google': logoGoogle,
+  'person-outline': personOutline
 });
 
 const app = createApp(App)

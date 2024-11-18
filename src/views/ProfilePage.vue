@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header>
       <ion-toolbar color="primary">
         <ion-title>Profile</ion-title>
         <ion-buttons slot="end" v-if="!isAnonymous">
@@ -12,12 +12,6 @@
     </ion-header>
 
     <ion-content :fullscreen="true">
-      <ion-header collapse="condense">
-        <ion-toolbar>
-          <ion-title size="large">Profile</ion-title>
-        </ion-toolbar>
-      </ion-header>
-
       <div id="profile-container">
         <div v-if="isAnonymous">
           <p class="info">You are signed in anonymously.</p>
@@ -27,16 +21,16 @@
           <img :src="profilePicture" alt="Profile Picture" id="profile-picture" />
           <div v-if="isEditMode" class="edit-mode">
             <ion-item class="form-item">
-              <ion-label position="floating">First Name</ion-label>
-              <ion-input v-model="firstName" type="text"></ion-input>
+              <ion-label slot="start" class="custom-label">First-Name</ion-label>
+              <ion-input v-model="firstName" type="text" placeholder="First Name"></ion-input>
             </ion-item>
             <ion-item class="form-item">
-              <ion-label position="floating">Last Name</ion-label>
-              <ion-input v-model="lastName" type="text"></ion-input>
+              <ion-label slot="start" class="custom-label">Last-Name</ion-label>
+              <ion-input v-model="lastName" type="text" placeholder="Last Name"></ion-input>
             </ion-item>
             <ion-item class="form-item">
-              <ion-label position="floating">Display Name</ion-label>
-              <ion-input v-model="displayNameWithoutAt" type="text"></ion-input>
+              <ion-label slot="start" class="custom-label">Display-Name</ion-label>
+              <ion-input v-model="displayNameWithoutAt" type="text" placeholder="Display Name"></ion-input>
             </ion-item>
             <div class="photo-buttons">
               <ion-button expand="block" color="secondary" @click="takePhoto">Take Photo</ion-button>
@@ -89,7 +83,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonItem, IonLabel, IonInput, IonIcon, IonButtons, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle } from '@ionic/vue';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonItem, IonInput, IonLabel, IonIcon, IonButtons, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle } from '@ionic/vue';
 import { settings, close } from 'ionicons/icons';
 import { logoutUser, updateProfile, getUserProfile, uploadProfilePicture, getUserPosts } from '../services/authentication';
 import { auth } from '../services/firebase';
@@ -265,6 +259,12 @@ onMounted(() => {
   justify-content: space-between;
   width: 100%;
   margin-top: 10px;
+}
+
+.custom-label {
+  font-weight: bold;
+  font-size: 14px;
+  color: #1e88e5;
 }
 
 h2 {
