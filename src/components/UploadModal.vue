@@ -1,8 +1,8 @@
 <template>
   <ion-modal :isOpen="isOpen" @didDismiss="closeModal">
     <ion-header>
-      <ion-toolbar>
-        <ion-title>Upload Artwork</ion-title>
+      <ion-toolbar color="primary">
+        <ion-title>Upload Image</ion-title>
         <ion-buttons slot="end">
           <ion-button @click="closeModal">Close</ion-button>
         </ion-buttons>
@@ -10,27 +10,33 @@
     </ion-header>
     <ion-content>
       <div class="form-container">
-        <ion-item>
-          <ion-label position="floating">Title</ion-label>
-          <ion-input v-model="uploadTitle"></ion-input>
+        <ion-item class="form-item">
+          <ion-input v-model="uploadTitle" type="text" placeholder="Enter the title of your artwork"></ion-input>
         </ion-item>
-        <ion-item>
-          <ion-label position="floating">Description</ion-label>
-          <ion-input v-model="uploadDescription"></ion-input>
+        <ion-item class="form-item">
+          <ion-textarea v-model="uploadDescription" placeholder="Describe your artwork"></ion-textarea>
         </ion-item>
-        <ion-item>
-          <ion-label position="floating">Tags</ion-label>
-          <ion-input v-model="uploadTags"></ion-input>
+        <ion-item class="form-item">
+          <ion-input v-model="uploadTags" type="text" placeholder="Enter tags (e.g., landscape, abstract, modern)"></ion-input>
         </ion-item>
-        <ion-item>
-          <ion-label position="floating">Exhibition Latitude</ion-label>
-          <ion-input v-model="exhibitionLat" type="number"></ion-input>
+        <ion-item lines="none" class="form-item">
+          <ion-label position="stacked">Image</ion-label>
+          <input type="file" @change="handleFileChange" class="file-input" />
         </ion-item>
-        <ion-item>
-          <ion-label position="floating">Exhibition Longitude</ion-label>
-          <ion-input v-model="exhibitionLng" type="number"></ion-input>
-        </ion-item>
-        <input type="file" @change="onFileChange" />
+        <div v-if="uploadFile" class="post-preview">
+          <ion-card>
+            <img :src="previewImage" alt="Image Preview" />
+            <ion-card-content>
+              <ion-card-title>{{ uploadTitle }}</ion-card-title>
+              <p>{{ uploadDescription }}</p>
+              <div class="tags">
+                <span v-for="(tag, index) in uploadTags.split(',').map(tag => tag.trim())" :key="index" class="tag">
+                  #{{ tag }}
+                </span>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </div>
         <ion-button expand="block" @click="uploadImage">Upload</ion-button>
       </div>
     </ion-content>
@@ -38,33 +44,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput } from '@ionic/vue';
+import { ref, watch } from 'vue';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
-import { auth } from '../services/firebase';
+import { app, auth } from '../services/firebase';
+import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonTextarea, IonCard, IonCardContent, IonCardTitle } from '@ionic/vue';
 
-const isOpen = ref(false);
+const props = defineProps({
+  isOpen: Boolean,
+});
+
+const emit = defineEmits(['close', 'upload']);
+
 const uploadTitle = ref('');
-const uploadDescription = ref('');
 const uploadTags = ref('');
-const exhibitionLat = ref(null);
-const exhibitionLng = ref(null);
-const uploadFile = ref(null);
+const uploadDescription = ref('');
+const uploadFile = ref<File | null>(null);
+const previewImage = ref('');
+
+const storage = getStorage(app);
+const db = getFirestore(app);
 
 const closeModal = () => {
-  isOpen.value = false;
+  emit('close');
+  // Reset values
+  uploadTitle.value = '';
+  uploadTags.value = '';
+  uploadDescription.value = '';
+  uploadFile.value = null;
+  previewImage.value = '';
 };
 
-const onFileChange = (event: Event) => {
+const handleFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement;
   if (target.files && target.files[0]) {
     uploadFile.value = target.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImage.value = e.target?.result as string;
+    };
+    reader.readAsDataURL(uploadFile.value);
   }
 };
 
 const uploadImage = async () => {
-  if (!uploadFile.value || !uploadTitle.value || !uploadDescription.value || !uploadTags.value || !exhibitionLat.value || !exhibitionLng.value) {
+  if (!uploadFile.value || !uploadTitle.value || !uploadTags.value || !uploadDescription.value) {
     alert('Please provide all required fields.');
     return;
   }
@@ -75,9 +99,17 @@ const uploadImage = async () => {
     return;
   }
 
-  const storage = getStorage();
+  const metadata = {
+    customMetadata: {
+      artistId: user.uid,
+      title: uploadTitle.value,
+      description: uploadDescription.value,
+      tags: uploadTags.value,
+    },
+  };
+
   const fileRef = storageRef(storage, `images/${user.uid}/${uploadFile.value.name}`);
-  const uploadTask = uploadBytesResumable(fileRef, uploadFile.value);
+  const uploadTask = uploadBytesResumable(fileRef, uploadFile.value, metadata);
 
   uploadTask.on('state_changed', (snapshot) => {
     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -87,22 +119,33 @@ const uploadImage = async () => {
     alert('Error uploading image: ' + error.message);
   }, async () => {
     const imageURL = await getDownloadURL(uploadTask.snapshot.ref);
-    const db = getFirestore();
-    const docRef = doc(db, 'content', uploadFile.value.name);
+    const docRef = doc(db, 'content', uploadFile.value!.name);
     await setDoc(docRef, {
       title: uploadTitle.value,
-      description: uploadDescription.value,
-      tags: uploadTags.value.split(',').map(tag => tag.trim()),
       imageURL,
       artistId: user.uid,
-      exhibitionLat: parseFloat(exhibitionLat.value),
-      exhibitionLng: parseFloat(exhibitionLng.value),
+      tags: uploadTags.value.split(',').map(tag => tag.trim()),
+      description: uploadDescription.value,
+      likes: 0,
+      comments: [],
       createdAt: new Date(),
     });
     alert('Image uploaded successfully!');
     closeModal();
+    emit('upload');
   });
 };
+
+// Watch the isOpen prop to reset the form when the modal is opened
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    uploadTitle.value = '';
+    uploadTags.value = '';
+    uploadDescription.value = '';
+    uploadFile.value = null;
+    previewImage.value = '';
+  }
+});
 </script>
 
 <style scoped>
@@ -114,10 +157,10 @@ const uploadImage = async () => {
 }
 
 .form-item {
-  --background: #f9f9f9;
-  --highlight-background: #e0e0e0;
+  --background: #ffffff;
+  --highlight-background: #f0f0f0;
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .file-input {
@@ -128,13 +171,13 @@ const uploadImage = async () => {
   background-color: #f9f9f9;
 }
 
-.image-preview {
+.post-preview {
   text-align: center;
   margin-top: 20px;
 }
 
-.image-preview img {
-  max-width: 50%;
+.post-preview img {
+  max-width: 100%;
   height: auto;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -151,11 +194,5 @@ const uploadImage = async () => {
   padding: 5px 10px;
   margin: 5px;
   font-size: 14px;
-}
-
-.upload-button {
-  margin-top: 20px;
-  border-radius: 12px;
-  font-weight: 500;
 }
 </style>

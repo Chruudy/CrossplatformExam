@@ -1,10 +1,19 @@
-import { getAuth, signInWithEmailAndPassword, signInAnonymously, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signOut, linkWithCredential, EmailAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, signInAnonymously, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signOut, linkWithCredential, EmailAuthProvider, updateProfile as firebaseUpdateProfile, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import app, { storage } from '../services/firebase';
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Set Firebase Auth persistence
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log('Firebase Auth persistence set to local');
+  })
+  .catch((error) => {
+    console.error('Error setting persistence:', error);
+  });
 
 export const uploadProfilePicture = async (userId: string, imageDataUrl: string) => {
   const fileName = 'profile.png';
@@ -22,7 +31,7 @@ export const signUpWithEmail = async (name: string, email: string, password: str
       lastName: name.split(' ')[1] || '',
       displayName: name,
       photoURL: '',
-      followers: 0,
+      followers: [],
       views: 0,
       likes: 0,
       following: []
@@ -164,3 +173,12 @@ export const getUserFeed = async () => {
     throw new Error('Failed to get user feed. Please try again.');
   }
 };
+
+// Listen for auth state changes
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("User is signed in:", user);
+  } else {
+    console.log("User is signed out");
+  }
+});

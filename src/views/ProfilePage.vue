@@ -42,9 +42,9 @@
             <h2>{{ displayNameWithAt }}</h2>
             <p class="info">{{ firstName }} {{ lastName }}</p>
             <div class="stats">
-              <div class="stat">
+              <div class="stat" @click="showFollowers">
                 <ion-icon name="people-outline"></ion-icon>
-                <p>{{ followers }}</p>
+                <p>{{ followers.length }}</p>
                 <span>Followers</span>
               </div>
               <div class="stat">
@@ -54,7 +54,7 @@
               </div>
               <div class="stat">
                 <ion-icon name="person-add-outline"></ion-icon>
-                <p>{{ following }}</p>
+                <p>{{ following.length }}</p>
                 <span>Following</span>
               </div>
             </div>
@@ -75,6 +75,25 @@
           <ion-button expand="block" color="danger" @click="logout">Sign Out</ion-button>
         </div>
       </div>
+
+      <!-- Followers Modal -->
+      <ion-modal :isOpen="isFollowersModalOpen" @didDismiss="closeFollowersModal">
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>Followers</ion-title>
+            <ion-buttons slot="end">
+              <ion-button @click="closeFollowersModal">Close</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content>
+          <ion-list>
+            <ion-item v-for="(follower, index) in followers" :key="index">
+              <ion-label>{{ follower.displayName }}</ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-content>
+      </ion-modal>
     </ion-content>
   </ion-page>
 </template>
@@ -83,11 +102,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonItem, IonInput, IonLabel, IonIcon, IonButtons, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle } from '@ionic/vue';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonItem, IonInput, IonLabel, IonIcon, IonButtons, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle, IonModal, IonList } from '@ionic/vue';
 import { settings, close } from 'ionicons/icons';
 import { logoutUser, updateProfile, getUserProfile, uploadProfilePicture, getUserPosts } from '../services/authentication';
 import { auth } from '../services/firebase';
 import { getStorage, ref as firebaseStorageRef, getDownloadURL } from 'firebase/storage';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 const isEditMode = ref(false);
@@ -95,14 +115,16 @@ const firstName = ref('');
 const lastName = ref('');
 const displayName = ref('');
 const profilePicture = ref('');
-const followers = ref(0);
-const following = ref(0);
+const followers = ref<Array<{ displayName: string }>>([]);
+const following = ref<Array<{ displayName: string }>>([]);
 const totalLikes = ref(0);
 const posts = ref<Array<{ imageURL: string; title: string; likes: number }>>([]);
 const isAnonymous = ref(false);
+const isFollowersModalOpen = ref(false);
 
 const router = useRouter();
 const storage = getStorage();
+const db = getFirestore();
 
 const toggleEditMode = () => {
   isEditMode.value = !isEditMode.value;
@@ -192,8 +214,8 @@ const loadUserProfile = async () => {
         firstName.value = profile.firstName;
         lastName.value = profile.lastName;
         displayName.value = profile.displayName;
-        followers.value = profile.followers || 0;
-        following.value = profile.following?.length || 0;
+        followers.value = await fetchFollowers(profile.followers || []);
+        following.value = await fetchFollowing(profile.following || []);
 
         // Fetch profile picture from Firebase Storage
         const profilePicRef = firebaseStorageRef(storage, `profilePictures/${user.uid}/profile.png`);
@@ -214,6 +236,38 @@ const loadUserProfile = async () => {
   } catch (error) {
     console.error("Error loading user profile:", error);
   }
+};
+
+const fetchFollowers = async (followerIds: string[]) => {
+  const followersList: { displayName: string }[] = [];
+  for (const id of followerIds) {
+    const followerDoc = await getDoc(doc(db, 'users', id));
+    if (followerDoc.exists()) {
+      const followerData = followerDoc.data() as { displayName: string };
+      followersList.push(followerData);
+    }
+  }
+  return followersList;
+};
+
+const fetchFollowing = async (followingIds: string[]) => {
+  const followingList: { displayName: string }[] = [];
+  for (const id of followingIds) {
+    const followingDoc = await getDoc(doc(db, 'users', id));
+    if (followingDoc.exists()) {
+      const followingData = followingDoc.data() as { displayName: string };
+      followingList.push(followingData);
+    }
+  }
+  return followingList;
+};
+
+const showFollowers = () => {
+  isFollowersModalOpen.value = true;
+};
+
+const closeFollowersModal = () => {
+  isFollowersModalOpen.value = false;
 };
 
 const displayNameWithAt = computed(() => `@${displayName.value}`);
@@ -286,6 +340,7 @@ h2 {
 
 .stat {
   text-align: center;
+  cursor: pointer;
 }
 
 .stat ion-icon {

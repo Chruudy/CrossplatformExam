@@ -25,7 +25,7 @@ import './theme/variables.css';
 
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
 import { addIcons } from 'ionicons';
-import { peopleOutline, heartOutline, personAddOutline, personCircleOutline, logInOutline, lockClosedOutline, logoGoogle, personOutline } from 'ionicons/icons';
+import { peopleOutline, heartOutline, personAddOutline, personRemoveOutline, personCircleOutline, logInOutline, lockClosedOutline, logoGoogle, personOutline, mailOutline } from 'ionicons/icons';
 
 // Register the icons
 addIcons({
@@ -36,7 +36,9 @@ addIcons({
   'log-in-outline': logInOutline,
   'lock-closed-outline': lockClosedOutline,
   'logo-google': logoGoogle,
-  'person-outline': personOutline
+  'person-outline': personOutline,
+  'person-remove-outline': personRemoveOutline,
+  'mail-outline': mailOutline,
 });
 
 const app = createApp(App)

@@ -36,8 +36,10 @@
       </div>
       <div v-if="showComments" class="comments-section">
         <div v-for="(comment, index) in comments" :key="index" class="comment">
-          <p><strong class="display-name">{{ comment.displayName }}</strong>: {{ comment.commentText }}</p>
-          <ion-button v-if="comment.userId === auth.currentUser?.uid" @click="deleteComment(index)">Delete</ion-button>
+          <p>
+            <strong class="display-name">{{ comment.displayName }}</strong>: {{ comment.commentText }}
+            <span v-if="comment.userId === auth.currentUser?.uid" class="delete-comment" @click="deleteComment(index)">Delete</span>
+          </p>
         </div>
         <ion-item>
           <ion-input v-model="newComment" placeholder="Add a comment..."></ion-input>
@@ -300,5 +302,24 @@ const closeModal = () => {
 
 .display-name {
   color: var(--ion-color-tertiary);
+}
+
+.delete-comment {
+  color: red;
+  cursor: pointer;
+  float: right;
+}
+
+.translate-button {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
 }
 </style>

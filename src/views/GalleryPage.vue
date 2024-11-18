@@ -23,14 +23,14 @@
 
       <!-- Filters and Tags -->
       <div class="filter-tags-container">
-        <ion-select placeholder="Sort By" @ionChange="applyFilter($event.detail.value)">
+        <ion-select placeholder="Sort By" @ionChange="applySort($event)">
           <ion-select-option value="">None</ion-select-option>
           <ion-select-option value="mostLiked">Most Liked</ion-select-option>
           <ion-select-option value="aToZ">A-Z</ion-select-option>
           <ion-select-option value="newest">Newest</ion-select-option>
           <ion-select-option value="oldest">Oldest</ion-select-option>
         </ion-select>
-        <ion-select placeholder="Tags" @ionChange="applyFilter($event.detail.value)">
+        <ion-select placeholder="Tags" @ionChange="applyTagFilter($event)">
           <ion-select-option value="">None</ion-select-option>
           <ion-select-option v-for="tag in availableTags" :key="tag" :value="tag">
             {{ tag }}
@@ -205,9 +205,14 @@ const selectUser = (user: { displayName: string }) => {
 const openUploadModal = () => { isUploadModalOpen.value = true; };
 const closeUploadModal = () => { isUploadModalOpen.value = false; };
 
-// Apply Filter
-const applyFilter = () => {
-  // This function is intentionally left empty as the filtering is handled by the computed property
+// Apply Sort
+const applySort = (event: CustomEvent) => {
+  selectedSort.value = event.detail.value;
+};
+
+// Apply Tag Filter
+const applyTagFilter = (event: CustomEvent) => {
+  selectedTag.value = event.detail.value;
 };
 
 // Like Image Functionality
