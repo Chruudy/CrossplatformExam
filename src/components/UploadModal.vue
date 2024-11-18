@@ -19,6 +19,18 @@
         <ion-item class="form-item">
           <ion-input v-model="uploadTags" type="text" placeholder="Enter tags (e.g., landscape, abstract, modern)"></ion-input>
         </ion-item>
+        <ion-item class="form-item">
+          <ion-label position="stacked">Exhibition</ion-label>
+          <ion-select v-model="selectedExhibition" placeholder="Select Exhibition">
+            <ion-select-option value="">None</ion-select-option>
+            <ion-select-option v-for="exhibition in exhibitions" :key="exhibition.id" :value="exhibition.id">
+              {{ exhibition.name }} - {{ exhibition.country }}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+        <ion-item class="form-item">
+          <ion-input v-model="exhibitionAddress" type="text" placeholder="Enter the exhibition address"></ion-input>
+        </ion-item>
         <ion-item lines="none" class="form-item">
           <ion-label position="stacked">Image</ion-label>
           <input type="file" @change="handleFileChange" class="file-input" />
@@ -46,9 +58,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { app, auth } from '../services/firebase';
-import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonTextarea, IonCard, IonCardContent, IonCardTitle } from '@ionic/vue';
+import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonTextarea, IonCard, IonCardContent, IonCardTitle, IonSelect, IonSelectOption } from '@ionic/vue';
+import { geocodeAddress, loadGoogleMapsScript } from '../services/googleService';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -61,6 +74,9 @@ const uploadTags = ref('');
 const uploadDescription = ref('');
 const uploadFile = ref<File | null>(null);
 const previewImage = ref('');
+const selectedExhibition = ref<string>('');
+const exhibitionAddress = ref('');
+const exhibitions = ref<Array<{ id: string; name: string; country: string }>>([]);
 
 const storage = getStorage(app);
 const db = getFirestore(app);
@@ -73,6 +89,8 @@ const closeModal = () => {
   uploadDescription.value = '';
   uploadFile.value = null;
   previewImage.value = '';
+  selectedExhibition.value = '';
+  exhibitionAddress.value = '';
 };
 
 const handleFileChange = (event: Event) => {
@@ -88,7 +106,7 @@ const handleFileChange = (event: Event) => {
 };
 
 const uploadImage = async () => {
-  if (!uploadFile.value || !uploadTitle.value || !uploadTags.value || !uploadDescription.value) {
+  if (!uploadFile.value || !uploadTitle.value || !uploadTags.value || !uploadDescription.value || !exhibitionAddress.value) {
     alert('Please provide all required fields.');
     return;
   }
@@ -99,41 +117,70 @@ const uploadImage = async () => {
     return;
   }
 
-  const metadata = {
-    customMetadata: {
-      artistId: user.uid,
-      title: uploadTitle.value,
-      description: uploadDescription.value,
-      tags: uploadTags.value,
-    },
-  };
+  try {
+    await loadGoogleMapsScript();
+    const location = await geocodeAddress(exhibitionAddress.value);
 
-  const fileRef = storageRef(storage, `images/${user.uid}/${uploadFile.value.name}`);
-  const uploadTask = uploadBytesResumable(fileRef, uploadFile.value, metadata);
+    const metadata = {
+      customMetadata: {
+        artistId: user.uid,
+        title: uploadTitle.value,
+        description: uploadDescription.value,
+        tags: uploadTags.value,
+        exhibitionId: selectedExhibition.value || 'None',
+        address: exhibitionAddress.value,
+        lat: location.lat.toString(),
+        lng: location.lng.toString(),
+      },
+    };
 
-  uploadTask.on('state_changed', (snapshot) => {
-    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-    console.log('Upload is ' + progress + '% done');
-  }, (error) => {
-    console.error('Upload failed:', error);
-    alert('Error uploading image: ' + error.message);
-  }, async () => {
-    const imageURL = await getDownloadURL(uploadTask.snapshot.ref);
-    const docRef = doc(db, 'content', uploadFile.value!.name);
-    await setDoc(docRef, {
-      title: uploadTitle.value,
-      imageURL,
-      artistId: user.uid,
-      tags: uploadTags.value.split(',').map(tag => tag.trim()),
-      description: uploadDescription.value,
-      likes: 0,
-      comments: [],
-      createdAt: new Date(),
+    const fileRef = storageRef(storage, `images/${user.uid}/${uploadFile.value.name}`);
+    const uploadTask = uploadBytesResumable(fileRef, uploadFile.value, metadata);
+
+    uploadTask.on('state_changed', (snapshot) => {
+      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      console.log('Upload is ' + progress + '% done');
+    }, (error) => {
+      console.error('Upload failed:', error);
+      alert('Error uploading image: ' + error.message);
+    }, async () => {
+      const imageURL = await getDownloadURL(uploadTask.snapshot.ref);
+      const docRef = doc(db, 'content', uploadFile.value!.name);
+      await setDoc(docRef, {
+        title: uploadTitle.value,
+        imageURL,
+        artistId: user.uid,
+        tags: uploadTags.value.split(',').map(tag => tag.trim()),
+        description: uploadDescription.value,
+        likes: 0,
+        comments: [],
+        createdAt: new Date(),
+        exhibitionId: selectedExhibition.value || 'None',
+        address: exhibitionAddress.value,
+        lat: location.lat,
+        lng: location.lng,
+      });
+      alert('Image uploaded successfully!');
+      closeModal();
+      emit('upload');
     });
-    alert('Image uploaded successfully!');
-    closeModal();
-    emit('upload');
-  });
+  } catch (error) {
+    console.error('Error geocoding address:', error);
+    alert('Error geocoding address: ' + error);
+  }
+};
+
+const fetchExhibitions = async () => {
+  try {
+    const exhibitionsSnapshot = await getDocs(collection(db, 'exhibitions'));
+    exhibitions.value = exhibitionsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().name,
+      country: doc.data().country,
+    }));
+  } catch (error) {
+    console.error('Error fetching exhibitions:', error);
+  }
 };
 
 // Watch the isOpen prop to reset the form when the modal is opened
@@ -144,6 +191,9 @@ watch(() => props.isOpen, (newVal) => {
     uploadDescription.value = '';
     uploadFile.value = null;
     previewImage.value = '';
+    selectedExhibition.value = '';
+    exhibitionAddress.value = '';
+    fetchExhibitions();
   }
 });
 </script>

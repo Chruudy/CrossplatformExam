@@ -34,36 +34,22 @@
           #{{ tag }}
         </span>
       </div>
-      <div v-if="showComments" class="comments-section">
-        <div v-for="(comment, index) in comments" :key="index" class="comment">
-          <p>
-            <strong class="display-name">{{ comment.displayName }}</strong>: {{ comment.commentText }}
-            <span v-if="comment.userId === auth.currentUser?.uid" class="delete-comment" @click="deleteComment(index)">Delete</span>
-          </p>
-        </div>
-        <ion-item>
-          <ion-input v-model="newComment" placeholder="Add a comment..."></ion-input>
-          <ion-button @click="addComment">Post</ion-button>
-        </ion-item>
-      </div>
+      <CommentsSection v-if="showComments" :comments="comments" :imageId="image.id" @deleteComment="deleteComment" @addComment="addComment" />
     </ion-card-content>
   </ion-card>
 
-  <!-- Modal for Enlarged Image -->
-  <div v-if="isModalOpen" class="modal" @click="closeModal">
-    <div class="modal-background"></div>
-    <div class="modal-image-container">
-      <img :src="image.src" :alt="image.alt" class="enlarged-image" />
-    </div>
-  </div>
+  <ImageModal v-if="isModalOpen" :image="image" :isModalOpen="isModalOpen" @closeModal="closeModal" />
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
-import { IonCard, IonCardContent, IonCardTitle, IonCardHeader, IonCardSubtitle, IonButton, IonIcon, IonItem, IonInput } from '@ionic/vue';
+import { IonCard, IonCardContent, IonCardTitle, IonCardHeader, IonCardSubtitle, IonButton, IonIcon } from '@ionic/vue';
 import { heart, heartOutline, chatbubbleOutline, personAddOutline, language } from 'ionicons/icons';
 import { auth } from '../services/firebase';
 import { getFirestore, doc, updateDoc, increment, getDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import CommentsSection from './CommentsSection.vue';
+import ImageModal from './ImageModal.vue';
+import { translateDescription as googleTranslateDescription } from '@/services/translateDescription';
 
 const db = getFirestore();
 
@@ -78,6 +64,7 @@ interface Image {
   likes: number;
   comments: Array<{ userId: string; commentText: string }>;
   tags: string[];
+  exhibitionId: string;
 }
 
 interface Comment {
@@ -91,7 +78,6 @@ const emit = defineEmits(['like', 'comment', 'follow']);
 
 const isLiked = ref(false);
 const showComments = ref(false);
-const newComment = ref('');
 const likes = ref(props.image.likes);
 const comments = ref<Comment[]>([]);
 const translatedDescription = ref('');
@@ -135,33 +121,28 @@ const toggleLike = async () => {
     const imageDoc = doc(db, 'content', props.image.id);
     const docSnapshot = await getDoc(imageDoc);
 
-    // Check if the document exists
     if (!docSnapshot.exists()) {
       console.error('Document does not exist:', props.image.id);
       return;
     }
 
-    // Document exists, proceed with like/unlike logic
     const likedBy = docSnapshot.data().likedBy || [];
     const userHasLiked = likedBy.includes(user.uid);
 
-    // Toggle like/unlike based on whether the user has already liked it
     if (userHasLiked) {
-      // User has already liked, so we are unliking
       await updateDoc(imageDoc, {
         likes: increment(-1),
         likedBy: arrayRemove(user.uid)
       });
       likes.value--;
-      isLiked.value = false; // Set to false after unliking
+      isLiked.value = false;
     } else {
-      // User hasn't liked yet, so we are liking
       await updateDoc(imageDoc, {
         likes: increment(1),
         likedBy: arrayUnion(user.uid)
       });
       likes.value++;
-      isLiked.value = true; // Set to true after liking
+      isLiked.value = true;
     }
 
     emit('like', props.image.id);
@@ -175,21 +156,20 @@ const toggleComments = () => {
   showComments.value = !showComments.value;
 };
 
-const addComment = async () => {
-  if (newComment.value.trim()) {
+const addComment = async (commentText: string) => {
+  if (commentText.trim()) {
     const user = auth.currentUser;
     if (!user) {
       alert('You must be logged in to comment.');
       return;
     }
 
-    const comment = { userId: user.uid, commentText: newComment.value };
+    const comment = { userId: user.uid, commentText };
     comments.value.push({ ...comment, displayName: user.displayName || 'Unknown User' });
     await updateDoc(doc(db, 'content', props.image.id), {
       comments: arrayUnion(comment)
     });
-    emit('comment', { imageId: props.image.id, commentText: newComment.value });
-    newComment.value = '';
+    emit('comment', { imageId: props.image.id, commentText });
   }
 };
 
@@ -217,26 +197,7 @@ const emitFollow = () => {
 };
 
 const translateDescription = async () => {
-  try {
-    const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=AIzaSyABoN3EsB_jyScms9laVjpwoUeFre5jmhU`, {
-      method: 'POST',
-      body: JSON.stringify({
-        q: props.image.description,
-        target: 'en'
-      }),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    const data = await response.json();
-    if (data.data && data.data.translations && data.data.translations.length > 0) {
-      translatedDescription.value = data.data.translations[0].translatedText;
-    } else {
-      console.error('Translation API response is invalid:', data);
-    }
-  } catch (error) {
-    console.error('Error translating description:', error);
-  }
+  translatedDescription.value = await googleTranslateDescription(props.image.description);
 };
 
 const openModal = () => {
@@ -258,58 +219,6 @@ const closeModal = () => {
   transform: scale(1.05);
 }
 
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
-}
-
-.modal-image-container {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.enlarged-image {
-  max-width: 90%;
-  max-height: 80vh;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s;
-}
-
-.modal-image-container:hover .enlarged-image {
-  transform: scale(1.05);
-}
-
-.display-name {
-  color: var(--ion-color-tertiary);
-}
-
-.delete-comment {
-  color: red;
-  cursor: pointer;
-  float: right;
-}
-
 .translate-button {
   display: flex;
   justify-content: center;
@@ -321,5 +230,15 @@ const closeModal = () => {
   justify-content: center;
   gap: 10px;
   margin-top: 10px;
+}
+
+.display-name {
+  color: var(--ion-color-tertiary);
+}
+
+.delete-comment {
+  color: red;
+  cursor: pointer;
+  float: right;
 }
 </style>

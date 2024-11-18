@@ -77,7 +77,7 @@ const route = useRoute();
 
 // Reactive State
 const searchQuery = ref<string>(''); // Search query
-const images = ref<Array<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string }>>([]); // Images array
+const images = ref<Array<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string; exhibitionId: string }>>([]); // Images array
 const isUploadModalOpen = ref(false); // Modal state
 const suggestedUsers = ref<Array<{ displayName: string }>>([]);
 const showSuggestions = ref(false);
@@ -85,7 +85,7 @@ const availableTags = ref<string[]>([]); // Available tags for filtering
 const selectedSort = ref<string>(''); // Selected sort option
 const selectedTag = ref<string>(''); // Selected tag option
 const isModalOpen = ref(false);
-const modalImage = ref<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string } | null>(null);
+const modalImage = ref<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string; exhibitionId: string } | null>(null);
 
 // Fetch Images from Firebase Storage
 const fetchImages = async () => {
@@ -122,7 +122,8 @@ const fetchImages = async () => {
           comments: docData?.comments || [],
           tags,
           alt: metadata.customMetadata?.title || 'Untitled',
-          createdAt: metadata.timeCreated || new Date().toISOString()
+          createdAt: metadata.timeCreated || new Date().toISOString(),
+          exhibitionId: metadata.customMetadata?.exhibitionId || 'Unknown'
         };
       });
       return Promise.all(itemPromises);
