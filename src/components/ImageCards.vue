@@ -65,6 +65,8 @@ interface Image {
   comments: Array<{ userId: string; commentText: string }>;
   tags: string[];
   exhibitionId: string;
+  lat: number;
+  lng: number;
 }
 
 interface Comment {
@@ -222,23 +224,24 @@ const closeModal = () => {
 .translate-button {
   display: flex;
   justify-content: center;
+}
+
+.tags {
   margin-top: 10px;
 }
 
+.tag {
+  display: inline-block;
+  background-color: #e0e0e0;
+  border-radius: 12px;
+  padding: 5px 10px;
+  margin: 5px;
+  font-size: 14px;
+}
 .action-buttons {
   display: flex;
   justify-content: center;
   gap: 10px;
   margin-top: 10px;
-}
-
-.display-name {
-  color: var(--ion-color-tertiary);
-}
-
-.delete-comment {
-  color: red;
-  cursor: pointer;
-  float: right;
 }
 </style>
