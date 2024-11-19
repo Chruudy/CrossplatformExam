@@ -67,6 +67,7 @@ interface Image {
   exhibitionId: string;
   lat: number;
   lng: number;
+  address: string;
 }
 
 interface Comment {

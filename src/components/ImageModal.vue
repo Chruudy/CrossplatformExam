@@ -6,9 +6,11 @@
       <div class="map-container">
         <div ref="map" class="map"></div>
         <div class="exhibition-details">
-          <h2>{{ exhibitionName }}</h2>
-          <p>{{ exhibitionCountry }}</p>
-          <p>{{ exhibitionAddress }}</p>
+          <h2>{{ image.title }}</h2>
+          <p>{{ image.artistName }}</p>
+          <p v-if="loading">Loading address...</p>
+          <p v-else-if="address">{{ address }}</p>
+          <p v-else class="error">Address not found</p>
         </div>
       </div>
     </div>
@@ -16,11 +18,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { initializeMap, loadGoogleMapsScript } from '../services/googleService';
+import { ref, watch } from 'vue';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-
-const db = getFirestore();
+import { loadGoogleMapsScript, geocodeAddress } from '../services/googleService';
 
 interface Image {
   id: string;
@@ -34,41 +34,91 @@ interface Image {
   comments: Array<{ userId: string; commentText: string }>;
   tags: string[];
   exhibitionId: string;
+  lat: number;
+  lng: number;
+  address: string;
 }
 
 const props = defineProps<{ image: Image, isModalOpen: boolean }>();
 const emit = defineEmits(['closeModal']);
 
-const exhibitionName = ref('');
-const exhibitionCountry = ref('');
-const exhibitionAddress = ref('');
+const db = getFirestore();
 const mapElement = ref<HTMLElement | null>(null);
+const map = ref<google.maps.Map | null>(null);
+const marker = ref<google.maps.Marker | null>(null);
+const address = ref('');
+const loading = ref(true);
 
 const closeModal = () => {
   emit('closeModal');
 };
 
-const loadExhibitionDetails = async () => {
+const fetchAddress = async () => {
   try {
-    const exhibitionDoc = await getDoc(doc(db, 'exhibitions', props.image.exhibitionId));
-    if (exhibitionDoc.exists()) {
-      const exhibitionData = exhibitionDoc.data();
-      exhibitionName.value = exhibitionData.name;
-      exhibitionCountry.value = exhibitionData.country;
-      exhibitionAddress.value = exhibitionData.address;
+    console.log('Fetching address for image ID:', props.image.id);
+    const docRef = doc(db, 'content', props.image.id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      address.value = docSnap.data().address || '';
+      if (!address.value) {
+        console.error('Address field is empty');
+      } else {
+        console.log('Address fetched:', address.value);
+      }
     } else {
-      console.error('Exhibition document does not exist:', props.image.exhibitionId);
+      console.error('No such document!');
     }
   } catch (error) {
-    console.error('Error loading exhibition details:', error);
+    console.error('Error fetching address:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
-onMounted(async () => {
-  await loadExhibitionDetails();
-  if (mapElement.value) {
+const initializeMap = async () => {
+  if (typeof window.google === 'undefined') {
+    console.error('Google Maps API is not loaded.');
+    return;
+  }
+
+  if (!mapElement.value) {
+    console.error('Map element is not available.');
+    return;
+  }
+
+  try {
+    console.log('Geocoding address:', address.value);
+    const location = await geocodeAddress(address.value);
+    console.log('Geocoded location:', location);
+    const mapOptions = {
+      center: location,
+      zoom: 15,
+    };
+    map.value = new window.google.maps.Map(mapElement.value as HTMLElement, mapOptions);
+
+    marker.value = new window.google.maps.Marker({
+      position: location,
+      map: map.value,
+    });
+    console.log('Map initialized with marker at location:', location);
+  } catch (error) {
+    console.error('Error initializing map:', error);
+  }
+};
+
+watch(() => props.isModalOpen, async (newVal) => {
+  if (newVal) {
+    loading.value = true;
+    console.log('Modal opened, loading Google Maps script...');
     await loadGoogleMapsScript();
-    initializeMap(mapElement.value, exhibitionAddress.value);
+    console.log('Google Maps script loaded, fetching address...');
+    await fetchAddress();
+    if (address.value) {
+      console.log('Address found, initializing map...');
+      initializeMap();
+    } else {
+      console.error('Address not found, map initialization skipped.');
+    }
   }
 });
 </script>
@@ -142,5 +192,9 @@ onMounted(async () => {
 .exhibition-details p {
   margin: 0;
   font-size: 14px;
+}
+
+.error {
+  color: red;
 }
 </style>
