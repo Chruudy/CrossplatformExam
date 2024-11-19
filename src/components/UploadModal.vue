@@ -148,8 +148,8 @@ const uploadImage = async () => {
           likes: 0,
           comments: [],
           createdAt: new Date(),
-          lat: selectedLocation.value.lat,
-          lng: selectedLocation.value.lng,
+          lat: selectedLocation.value?.lat ?? 0,
+          lng: selectedLocation.value?.lng ?? 0,
         });
         alert('Image uploaded successfully!');
         closeModal();

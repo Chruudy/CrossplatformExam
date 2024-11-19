@@ -238,6 +238,7 @@ const closeModal = () => {
   margin: 5px;
   font-size: 14px;
 }
+
 .action-buttons {
   display: flex;
   justify-content: center;
