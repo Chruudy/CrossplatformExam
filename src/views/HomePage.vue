@@ -24,35 +24,28 @@
       </div>
       <div id="showcase-container">
         <h2>Recent Posts from Followed Users</h2>
-        <ion-grid>
-          <ion-row>
-            <ion-col size="12" size-md="6" size-lg="4" v-for="(image, index) in followedImages" :key="index">
-              <ion-card @click="navigateToPost(image.id)">
-                <img :src="image.src" :alt="image.alt" />
-                <ion-card-content>
-                  <ion-card-title>{{ image.title }}</ion-card-title>
-                </ion-card-content>
-              </ion-card>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
+        <div class="grid-container">
+          <div class="grid-item" v-for="(image, index) in followedImages" :key="index" @click="openImageModal(image)">
+            <img :src="image.src" :alt="image.alt" />
+            <div class="image-title">{{ image.title }}</div>
+          </div>
+        </div>
       </div>
+      <ImageModal v-if="isModalOpen" :image="selectedImage" :isModalOpen="isModalOpen" @closeModal="closeModal" />
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle, IonList, IonItem, IonLabel, IonIcon } from '@ionic/vue';
-import { getFirestore, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonLabel, IonIcon } from '@ionic/vue';
+import { getFirestore, collection, query, where, limit, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { auth } from '../services/firebase';
-import { getUserProfile } from '../services/authentication';
 import { heart, personAdd } from 'ionicons/icons';
 import { onAuthStateChanged } from 'firebase/auth';
+import ImageModal from '../components/ImageModal.vue';
 
 const db = getFirestore();
-const router = useRouter();
 
 const firstName = ref('');
 interface Image {
@@ -60,6 +53,7 @@ interface Image {
   src: string;
   alt: string;
   title: string;
+  description: string;
 }
 
 interface Activity {
@@ -70,23 +64,23 @@ interface Activity {
 
 const followedImages = ref<Image[]>([]);
 const recentActivities = ref<Activity[]>([]);
+const isModalOpen = ref(false);
+const selectedImage = ref<Image | null>(null);
+const userProfile = ref<any>(null);
 
-const loadFollowedImages = async () => {
+const loadFollowedImages = async (followedUsers: string[]) => {
   try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated');
-
-    const profile = await getUserProfile();
-    if (profile && profile.following && profile.following.length > 0) {
-      const followedUsers = profile.following;
+    if (followedUsers.length > 0) {
       const contentQuery = query(collection(db, 'content'), where('artistId', 'in', followedUsers), orderBy('createdAt', 'desc'), limit(10));
-      const querySnapshot = await getDocs(contentQuery);
-      followedImages.value = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        src: doc.data().imageURL,
-        alt: doc.data().title,
-        title: doc.data().title
-      }));
+      onSnapshot(contentQuery, (snapshot) => {
+        followedImages.value = snapshot.docs.map(doc => ({
+          id: doc.id,
+          src: doc.data().imageURL,
+          alt: doc.data().title,
+          title: doc.data().title,
+          description: doc.data().description
+        }));
+      });
     } else {
       followedImages.value = []; // Clear the followed images if no followed users
     }
@@ -101,30 +95,40 @@ const loadRecentActivities = async () => {
     if (!user) throw new Error('User not authenticated');
 
     const activitiesQuery = query(collection(db, 'activities'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'), limit(10));
-    const querySnapshot = await getDocs(activitiesQuery);
-    recentActivities.value = querySnapshot.docs.map(doc => ({
-      icon: doc.data().type === 'like' ? heart : personAdd,
-      message: doc.data().message,
-      timestamp: new Date(doc.data().timestamp.toMillis()).toLocaleString()
-    }));
+    onSnapshot(activitiesQuery, (snapshot) => {
+      recentActivities.value = snapshot.docs.map(doc => ({
+        icon: doc.data().type === 'like' ? heart : personAdd,
+        message: doc.data().message,
+        timestamp: new Date(doc.data().timestamp.toMillis()).toLocaleString()
+      }));
+    });
   } catch (error) {
     console.error('Error loading recent activities:', error);
   }
 };
 
-const navigateToPost = (postId: string) => {
-  router.push({ path: '/page/gallery', query: { postId } });
+const openImageModal = (image: Image) => {
+  selectedImage.value = image;
+  isModalOpen.value = true;
+};
+
+const closeModal = () => {
+  isModalOpen.value = false;
+  selectedImage.value = null;
 };
 
 onMounted(() => {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       try {
-        const profile = await getUserProfile();
-        if (profile) {
-          firstName.value = profile.firstName;
-        }
-        await loadFollowedImages();
+        const profileDocRef = doc(db, 'users', user.uid);
+        onSnapshot(profileDocRef, async (doc) => {
+          if (doc.exists()) {
+            userProfile.value = doc.data();
+            firstName.value = userProfile.value.firstName;
+            await loadFollowedImages(userProfile.value.following || []);
+          }
+        });
         await loadRecentActivities();
       } catch (error) {
         console.error("Error loading user profile:", error);
@@ -210,29 +214,36 @@ ion-item p {
   margin-bottom: 10px;
 }
 
-/* Card Styling */
-ion-card {
-  margin: 10px;
+/* Grid Styling */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.grid-item {
   border-radius: 8px;
+  overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
   transition: transform 0.2s;
 }
-ion-card:hover {
-  transform: scale(1.02);
-}
 
-ion-card img {
+.grid-item img {
   width: 100%;
-  height: auto;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  height: 200px;
+  object-fit: cover;
 }
 
-ion-card-title {
-  font-size: 16px;
+.image-title {
+  padding: 10px;
+  font-size: 14px;
   text-align: center;
-  font-weight: 600;
-  margin-bottom: 8px;
+  background: #fff;
   color: #333;
+}
+
+.grid-item:hover {
+  transform: scale(1.05);
 }
 </style>

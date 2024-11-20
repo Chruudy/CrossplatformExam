@@ -66,7 +66,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle, IonButton, IonIcon, IonButtons, IonSelect, IonSelectOption } from '@ionic/vue';
-import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { getStorage, ref as firebaseStorageRef, getDownloadURL } from 'firebase/storage';
 import { app, auth } from '../services/firebase';
 
@@ -127,9 +127,41 @@ const loadUserProfile = async () => {
 
     // Calculate total likes
     totalLikes.value = posts.value.reduce((sum, post) => sum + post.likes, 0);
+
+    // Set up snapshot listener for likes
+    setupLikesSnapshotListener();
+    // Set up snapshot listener for followers
+    setupFollowersSnapshotListener();
   } catch (error) {
     console.error('Error loading user profile:', error);
   }
+};
+
+const setupLikesSnapshotListener = () => {
+  const postsQuery = query(collection(db, 'content'), where('artistId', '==', userId));
+  onSnapshot(postsQuery, (snapshot) => {
+    snapshot.docChanges().forEach(change => {
+      if (change.type === 'modified') {
+        const updatedPost = change.doc.data();
+        const index = posts.value.findIndex(post => post.imageURL === updatedPost.imageURL);
+        if (index !== -1) {
+          posts.value[index].likes = updatedPost.likes || 0;
+        }
+        totalLikes.value = posts.value.reduce((sum, post) => sum + post.likes, 0);
+      }
+    });
+  });
+};
+
+const setupFollowersSnapshotListener = () => {
+  const profileDocRef = doc(db, 'users', userId);
+  onSnapshot(profileDocRef, (doc) => {
+    if (doc.exists()) {
+      const profile = doc.data();
+      followers.value = profile.followers?.length || 0;
+      following.value = profile.following?.length || 0;
+    }
+  });
 };
 
 const toggleFollow = async () => {
@@ -139,20 +171,26 @@ const toggleFollow = async () => {
     return;
   }
 
-  const userDocRef = doc(db, 'users', user.uid);
-  const profileDocRef = doc(db, 'users', userId);
+  try {
+    console.log('Toggling follow status...');
+    const userDocRef = doc(db, 'users', user.uid);
+    const profileDocRef = doc(db, 'users', userId);
 
-  if (isFollowing.value) {
-    await updateDoc(userDocRef, { following: arrayRemove(userId) });
-    await updateDoc(profileDocRef, { followers: arrayRemove(user.uid) });
-    followers.value--;
-  } else {
-    await updateDoc(userDocRef, { following: arrayUnion(userId) });
-    await updateDoc(profileDocRef, { followers: arrayUnion(user.uid) });
-    followers.value++;
+    if (isFollowing.value) {
+      console.log('Unfollowing user...');
+      await updateDoc(userDocRef, { following: arrayRemove(userId) });
+      await updateDoc(profileDocRef, { followers: arrayRemove(user.uid) });
+    } else {
+      console.log('Following user...');
+      await updateDoc(userDocRef, { following: arrayUnion(userId) });
+      await updateDoc(profileDocRef, { followers: arrayUnion(user.uid) });
+    }
+
+    isFollowing.value = !isFollowing.value;
+    console.log('Follow status toggled.');
+  } catch (error) {
+    console.error('Error toggling follow status:', error);
   }
-
-  isFollowing.value = !isFollowing.value;
 };
 
 const sendMessage = () => {

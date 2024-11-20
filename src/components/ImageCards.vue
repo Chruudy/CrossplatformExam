@@ -24,9 +24,9 @@
           <ion-icon :icon="chatbubbleOutline"></ion-icon>
           Comments
         </ion-button>
-        <ion-button color="tertiary" fill="clear" size="small" @click="emitFollow">
-          <ion-icon :icon="personAddOutline"></ion-icon>
-          Follow
+        <ion-button color="tertiary" fill="clear" size="small" @click="toggleFollow">
+          <ion-icon :icon="isFollowing ? personRemoveOutline : personAddOutline"></ion-icon>
+          {{ isFollowing ? 'Unfollow' : 'Follow' }}
         </ion-button>
       </div>
       <div class="tags">
@@ -44,37 +44,14 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import { IonCard, IonCardContent, IonCardTitle, IonCardHeader, IonCardSubtitle, IonButton, IonIcon } from '@ionic/vue';
-import { heart, heartOutline, chatbubbleOutline, personAddOutline, language } from 'ionicons/icons';
+import { heart, heartOutline, chatbubbleOutline, personAddOutline, personRemoveOutline, language } from 'ionicons/icons';
 import { auth } from '../services/firebase';
-import { runTransaction, getFirestore, doc, updateDoc, increment, getDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { runTransaction, getFirestore, doc, updateDoc, increment, getDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import CommentsSection from './CommentsSection.vue';
 import ImageModal from './ImageModal.vue';
 import { translateDescription as googleTranslateDescription } from '@/services/translateDescription';
 
 const db = getFirestore();
-
-interface Image {
-  id: string;
-  src: string;
-  alt: string;
-  title: string;
-  artistId: string;
-  artistName: string;
-  description: string;
-  likes: number;
-  comments: Array<{ userId: string; commentText: string }>;
-  tags: string[];
-  exhibitionId: string;
-  lat: number;
-  lng: number;
-  address: string;
-}
-
-interface Comment {
-  userId: string;
-  commentText: string;
-  displayName?: string;
-}
 
 const props = defineProps<{ image: Image }>();
 const emit = defineEmits(['like', 'comment', 'follow']);
@@ -86,6 +63,7 @@ const comments = ref<Comment[]>([]);
 const translatedDescription = ref('');
 const tags = ref([...props.image.tags]);
 const isModalOpen = ref(false);
+const isFollowing = ref(false);
 
 watch(() => props.image.likes, (newLikes) => {
   likes.value = newLikes;
@@ -120,9 +98,41 @@ const fetchIsLiked = async (): Promise<boolean> => {
   return likedBy.includes(user.uid);
 };
 
+const fetchIsFollowing = async (): Promise<boolean> => {
+  const user = auth.currentUser;
+  if (!user) return false;
+
+  const userDoc = await getDoc(doc(db, 'users', user.uid));
+  if (!userDoc.exists()) return false;
+
+  const following = userDoc.data().following || [];
+  return following.includes(props.image.artistId);
+};
+
 onMounted(async () => {
   comments.value = await fetchCommentsWithDisplayNames(props.image.comments);
   isLiked.value = await fetchIsLiked();
+  isFollowing.value = await fetchIsFollowing();
+
+  // Set up snapshot listener for likes
+  const likesRef = doc(db, 'content', props.image.id);
+  onSnapshot(likesRef, (doc) => {
+    if (doc.exists()) {
+      likes.value = doc.data().likes;
+    }
+  });
+
+  // Set up snapshot listener for following
+  const user = auth.currentUser;
+  if (user) {
+    const userDocRef = doc(db, 'users', user.uid);
+    onSnapshot(userDocRef, (doc) => {
+      if (doc.exists()) {
+        const following = doc.data().following || [];
+        isFollowing.value = following.includes(props.image.artistId);
+      }
+    });
+  }
 });
 
 let isProcessing = false;
@@ -219,8 +229,38 @@ const deleteComment = async (index: number) => {
   });
 };
 
-const emitFollow = () => {
-  emit('follow', props.image.artistId);
+const toggleFollow = async () => {
+  if (isProcessing) return;
+  isProcessing = true;
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert('You must be logged in to follow users.');
+    isProcessing = false;
+    return;
+  }
+
+  try {
+    const userDocRef = doc(db, 'users', user.uid);
+    const artistDocRef = doc(db, 'users', props.image.artistId);
+
+    if (isFollowing.value) {
+      await updateDoc(userDocRef, { following: arrayRemove(props.image.artistId) });
+      await updateDoc(artistDocRef, { followers: arrayRemove(user.uid) });
+      isFollowing.value = false;
+    } else {
+      await updateDoc(userDocRef, { following: arrayUnion(props.image.artistId) });
+      await updateDoc(artistDocRef, { followers: arrayUnion(user.uid) });
+      isFollowing.value = true;
+    }
+
+    emit('follow', props.image.artistId);
+  } catch (error) {
+    console.error('Error toggling follow status:', error);
+    alert('Error toggling follow status: ' + (error as Error).message);
+  } finally {
+    isProcessing = false;
+  }
 };
 
 const translateDescription = async () => {
@@ -271,6 +311,5 @@ const closeModal = () => {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-top: 10px;
 }
 </style>

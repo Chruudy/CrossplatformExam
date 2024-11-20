@@ -107,7 +107,7 @@ import { settings, close } from 'ionicons/icons';
 import { logoutUser, updateProfile, getUserProfile, uploadProfilePicture, getUserPosts } from '../services/authentication';
 import { auth } from '../services/firebase';
 import { getStorage, ref as firebaseStorageRef, getDownloadURL } from 'firebase/storage';
-import { getFirestore, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 const isEditMode = ref(false);
@@ -235,6 +235,8 @@ const loadUserProfile = async () => {
 
       // Set up snapshot listener for likes
       setupLikesSnapshotListener();
+      // Set up snapshot listener for followers
+      setupFollowersSnapshotListener();
     }
   } catch (error) {
     console.error("Error loading user profile:", error);
@@ -283,8 +285,9 @@ const setupLikesSnapshotListener = () => {
   const user = auth.currentUser;
   if (!user) return;
 
-  const postsRef = doc(db, 'users', user.uid, 'posts');
-  onSnapshot(postsRef, (snapshot) => {
+  const postsRef = collection(db, 'content');
+  const postsQuery = query(postsRef, where('artistId', '==', user.uid));
+  onSnapshot(postsQuery, (snapshot) => {
     const updatedPosts = snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id
@@ -295,6 +298,20 @@ const setupLikesSnapshotListener = () => {
       likes: post.likes || 0
     }));
     totalLikes.value = posts.value.reduce((sum, post) => sum + post.likes, 0);
+  });
+};
+
+const setupFollowersSnapshotListener = () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const userDocRef = doc(db, 'users', user.uid);
+  onSnapshot(userDocRef, (doc) => {
+    if (doc.exists()) {
+      const profile = doc.data();
+      followers.value = profile.followers || [];
+      following.value = profile.following || [];
+    }
   });
 };
 

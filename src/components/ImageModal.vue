@@ -3,6 +3,10 @@
     <div class="modal-background"></div>
     <div class="modal-content" @click.stop>
       <img :src="image.src" :alt="image.alt" class="enlarged-image" />
+      <div class="image-details">
+        <h2>{{ image.title }}</h2>
+        <p>{{ image.description }}</p>
+      </div>
       <div class="map-container">
         <div ref="map" class="map"></div>
         <div class="exhibition-details">
@@ -20,7 +24,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { loadGoogleMapsScript, geocodeAddress } from '../services/googleService';
+import { loadGoogleMapsScript, geocodeAddress, initializeMap } from '../services/googleService';
 
 interface Image {
   id: string;
@@ -44,8 +48,6 @@ const emit = defineEmits(['closeModal']);
 
 const db = getFirestore();
 const mapElement = ref<HTMLElement | null>(null);
-const map = ref<google.maps.Map | null>(null);
-const marker = ref<google.maps.Marker | null>(null);
 const address = ref('');
 const loading = ref(true);
 
@@ -75,12 +77,7 @@ const fetchAddress = async () => {
   }
 };
 
-const initializeMap = async () => {
-  if (typeof window.google === 'undefined') {
-    console.error('Google Maps API is not loaded.');
-    return;
-  }
-
+const initializeMapWithAddress = async () => {
   if (!mapElement.value) {
     console.error('Map element is not available.');
     return;
@@ -90,16 +87,7 @@ const initializeMap = async () => {
     console.log('Geocoding address:', address.value);
     const location = await geocodeAddress(address.value);
     console.log('Geocoded location:', location);
-    const mapOptions = {
-      center: location,
-      zoom: 15,
-    };
-    map.value = new window.google.maps.Map(mapElement.value as HTMLElement, mapOptions);
-
-    marker.value = new window.google.maps.Marker({
-      position: location,
-      map: map.value,
-    });
+    initializeMap(mapElement.value, location.lat, location.lng);
     console.log('Map initialized with marker at location:', location);
   } catch (error) {
     console.error('Error initializing map:', error);
@@ -115,7 +103,7 @@ watch(() => props.isModalOpen, async (newVal) => {
     await fetchAddress();
     if (address.value) {
       console.log('Address found, initializing map...');
-      initializeMap();
+      initializeMapWithAddress();
     } else {
       console.error('Address not found, map initialization skipped.');
     }
@@ -168,10 +156,26 @@ watch(() => props.isModalOpen, async (newVal) => {
   margin-bottom: 20px;
 }
 
+.image-details {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.image-details h2 {
+  font-size: 24px;
+  color: #333;
+}
+
+.image-details p {
+  font-size: 16px;
+  color: #666;
+}
+
 .map-container {
   width: 100%;
   height: 400px;
   position: relative;
+  margin-bottom: 20px;
 }
 
 .exhibition-details {

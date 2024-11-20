@@ -45,7 +45,6 @@
           :key="image.id"
           :image="image"
           @comment="commentImage"
-          @follow="followArtist"
         />
       </div>
 
@@ -63,7 +62,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonButtons, IonSelect, IonSelectOption } from '@ionic/vue';
-import { getFirestore, collection, query, where, getDocs, getDoc, updateDoc, doc, arrayUnion, limit, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, getDoc, updateDoc, doc, arrayUnion, limit, orderBy, onSnapshot } from 'firebase/firestore';
 import { getStorage, ref as storageRef, listAll, getDownloadURL, getMetadata } from 'firebase/storage';
 import { app, auth } from '../services/firebase';
 import SearchBar from '../components/SearchBar.vue';
@@ -134,6 +133,56 @@ const fetchImages = async () => {
   } catch (error) {
     console.error('Error fetching images:', error);
   }
+};
+
+const setupSnapshotListener = () => {
+  const imagesQuery = query(collection(db, 'content'));
+  onSnapshot(imagesQuery, (snapshot) => {
+    snapshot.docChanges().forEach(async (change) => {
+      if (change.type === 'added' || change.type === 'modified') {
+        const docData = change.doc.data();
+        const imageURL = await getDownloadURL(storageRef(storage, `images/${docData.artistId}/${change.doc.id}`));
+        const metadata = await getMetadata(storageRef(storage, `images/${docData.artistId}/${change.doc.id}`));
+        const artistId = metadata.customMetadata?.artistId || 'Unknown';
+        let artistName = 'Unknown Artist';
+        if (artistId !== 'Unknown') {
+          const artistDoc = await getDoc(doc(db, `users/${artistId}`));
+          artistName = artistDoc.exists() ? artistDoc.data().displayName : 'Unknown Artist';
+        }
+        const tags = metadata.customMetadata?.tags ? metadata.customMetadata.tags.split(',').map(tag => tag.trim()) : [];
+        tags.forEach(tag => {
+          if (!availableTags.value.includes(tag)) {
+            availableTags.value.push(tag);
+          }
+        });
+        const image = {
+          id: change.doc.id,
+          src: imageURL,
+          title: metadata.customMetadata?.title || 'Untitled',
+          artistId,
+          artistName,
+          description: metadata.customMetadata?.description || '',
+          likes: docData.likes || 0,
+          comments: docData.comments || [],
+          tags,
+          alt: metadata.customMetadata?.title || 'Untitled',
+          createdAt: metadata.timeCreated || new Date().toISOString(),
+          exhibitionId: metadata.customMetadata?.exhibitionId || 'Unknown'
+        };
+        const index = images.value.findIndex(img => img.id === change.doc.id);
+        if (index !== -1) {
+          images.value[index] = image;
+        } else {
+          images.value.push(image);
+        }
+        availableTags.value.sort(); // Sort tags alphabetically
+        console.log('Updated images:', images.value);
+      } else if (change.type === 'removed') {
+        images.value = images.value.filter(img => img.id !== change.doc.id);
+        console.log('Removed image:', change.doc.id);
+      }
+    });
+  });
 };
 
 // Filtered Images based on search query, selected sort, and selected tag
@@ -215,19 +264,6 @@ const applyTagFilter = (event: CustomEvent) => {
   selectedTag.value = event.detail.value;
 };
 
-// // Like Image Functionality
-// const likeImage = async (imageId: string) => {
-//   const user = auth.currentUser;
-//   if (!user) {
-//     alert('You must be logged in to like images.');
-//     return;
-//   }
-
-//   const imageDoc = doc(db, 'content', imageId);
-//   await updateDoc(imageDoc, { likes: increment(1) });
-//   alert('Image liked!');
-// };
-
 // Comment on Image Functionality
 const commentImage = async ({ imageId, commentText }: { imageId: string; commentText: string }) => {
   const user = auth.currentUser;
@@ -241,22 +277,10 @@ const commentImage = async ({ imageId, commentText }: { imageId: string; comment
   alert('Comment added!');
 };
 
-// Follow Artist Functionality
-const followArtist = async (artistId: string) => {
-  const user = auth.currentUser;
-  if (!user) {
-    alert('You must be logged in to follow artists.');
-    return;
-  }
-
-  const userDocRef = doc(db, 'users', user.uid);
-  await updateDoc(userDocRef, { following: arrayUnion(artistId) });
-  alert('Artist followed!');
-};
-
 // Fetch images on component mount
 onMounted(async () => {
   await fetchImages();
+  setupSnapshotListener();
   const postId = route.query.postId as string;
   const openModal = route.query.openModal === 'true';
   if (postId) {
