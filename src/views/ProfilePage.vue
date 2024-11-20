@@ -107,7 +107,7 @@ import { settings, close } from 'ionicons/icons';
 import { logoutUser, updateProfile, getUserProfile, uploadProfilePicture, getUserPosts } from '../services/authentication';
 import { auth } from '../services/firebase';
 import { getStorage, ref as firebaseStorageRef, getDownloadURL } from 'firebase/storage';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 const isEditMode = ref(false);
@@ -232,6 +232,9 @@ const loadUserProfile = async () => {
 
       // Calculate total likes
       totalLikes.value = posts.value.reduce((sum, post) => sum + post.likes, 0);
+
+      // Set up snapshot listener for likes
+      setupLikesSnapshotListener();
     }
   } catch (error) {
     console.error("Error loading user profile:", error);
@@ -275,6 +278,25 @@ const displayNameWithoutAt = computed({
   get: () => displayName.value.startsWith('@') ? displayName.value.slice(1) : displayName.value,
   set: (value) => displayName.value = value.startsWith('@') ? value : `@${value}`
 });
+
+const setupLikesSnapshotListener = () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const postsRef = doc(db, 'users', user.uid, 'posts');
+  onSnapshot(postsRef, (snapshot) => {
+    const updatedPosts = snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id
+    }));
+    posts.value = updatedPosts.map(post => ({
+      imageURL: post.imageURL,
+      title: post.title,
+      likes: post.likes || 0
+    }));
+    totalLikes.value = posts.value.reduce((sum, post) => sum + post.likes, 0);
+  });
+};
 
 onMounted(() => {
   onAuthStateChanged(auth, (user) => {

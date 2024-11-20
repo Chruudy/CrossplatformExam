@@ -46,7 +46,7 @@ import { ref, watch, onMounted } from 'vue';
 import { IonCard, IonCardContent, IonCardTitle, IonCardHeader, IonCardSubtitle, IonButton, IonIcon } from '@ionic/vue';
 import { heart, heartOutline, chatbubbleOutline, personAddOutline, language } from 'ionicons/icons';
 import { auth } from '../services/firebase';
-import { getFirestore, doc, updateDoc, increment, getDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { runTransaction, getFirestore, doc, updateDoc, increment, getDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import CommentsSection from './CommentsSection.vue';
 import ImageModal from './ImageModal.vue';
 import { translateDescription as googleTranslateDescription } from '@/services/translateDescription';
@@ -109,49 +109,73 @@ const fetchCommentsWithDisplayNames = async (comments: Array<{ userId: string; c
   return commentsWithDisplayNames;
 };
 
+const fetchIsLiked = async (): Promise<boolean> => {
+  const user = auth.currentUser;
+  if (!user) return false;
+
+  const imageDoc = await getDoc(doc(db, 'content', props.image.id));
+  if (!imageDoc.exists()) return false;
+
+  const likedBy = imageDoc.data().likedBy || [];
+  return likedBy.includes(user.uid);
+};
+
 onMounted(async () => {
   comments.value = await fetchCommentsWithDisplayNames(props.image.comments);
+  isLiked.value = await fetchIsLiked();
 });
 
+let isProcessing = false;
+
 const toggleLike = async () => {
+  if (isProcessing) return;
+  isProcessing = true;
+
   const user = auth.currentUser;
   if (!user) {
     alert('You must be logged in to like images.');
+    isProcessing = false;
     return;
   }
 
   try {
     const imageDoc = doc(db, 'content', props.image.id);
-    const docSnapshot = await getDoc(imageDoc);
 
-    if (!docSnapshot.exists()) {
-      console.error('Document does not exist:', props.image.id);
-      return;
-    }
+    await runTransaction(db, async (transaction) => {
+      const docSnapshot = await transaction.get(imageDoc);
 
-    const likedBy = docSnapshot.data().likedBy || [];
-    const userHasLiked = likedBy.includes(user.uid);
+      if (!docSnapshot.exists()) {
+        console.error('Document does not exist:', props.image.id);
+        isProcessing = false;
+        return;
+      }
 
-    if (userHasLiked) {
-      await updateDoc(imageDoc, {
-        likes: increment(-1),
-        likedBy: arrayRemove(user.uid)
-      });
-      likes.value--;
-      isLiked.value = false;
-    } else {
-      await updateDoc(imageDoc, {
-        likes: increment(1),
-        likedBy: arrayUnion(user.uid)
-      });
-      likes.value++;
-      isLiked.value = true;
-    }
+      const likedBy = docSnapshot.data().likedBy || [];
+      const userHasLiked = likedBy.includes(user.uid);
+
+      if (userHasLiked) {
+        transaction.update(imageDoc, {
+          likes: increment(-1),
+          likedBy: arrayRemove(user.uid)
+        });
+        likes.value--;
+        isLiked.value = false;
+      } else {
+        transaction.update(imageDoc, {
+          likes: increment(1),
+          likedBy: arrayUnion(user.uid)
+        });
+        likes.value++;
+        isLiked.value = true;
+      }
+    });
 
     emit('like', props.image.id);
   } catch (error) {
     console.error('Error liking image:', error);
     alert('Error liking image: ' + (error as Error).message);
+  } finally {
+    isProcessing = false;
   }
 };
 
@@ -216,6 +240,9 @@ const closeModal = () => {
 .image {
   cursor: pointer;
   transition: transform 0.2s;
+  width: 100%; /* Set your desired width */
+  height: 200px; /* Set your desired height */
+  object-fit: cover; /* Ensure the image covers the area without distortion */
 }
 
 .image:hover {

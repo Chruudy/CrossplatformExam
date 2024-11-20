@@ -44,7 +44,6 @@
           v-for="image in filteredImages" 
           :key="image.id"
           :image="image"
-          @like="likeImage"
           @comment="commentImage"
           @follow="followArtist"
         />
@@ -64,7 +63,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonButtons, IonSelect, IonSelectOption } from '@ionic/vue';
-import { getFirestore, collection, query, where, getDocs, getDoc, updateDoc, doc, increment, arrayUnion, limit, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, getDoc, updateDoc, doc, arrayUnion, limit, orderBy } from 'firebase/firestore';
 import { getStorage, ref as storageRef, listAll, getDownloadURL, getMetadata } from 'firebase/storage';
 import { app, auth } from '../services/firebase';
 import SearchBar from '../components/SearchBar.vue';
@@ -216,18 +215,18 @@ const applyTagFilter = (event: CustomEvent) => {
   selectedTag.value = event.detail.value;
 };
 
-// Like Image Functionality
-const likeImage = async (imageId: string) => {
-  const user = auth.currentUser;
-  if (!user) {
-    alert('You must be logged in to like images.');
-    return;
-  }
+// // Like Image Functionality
+// const likeImage = async (imageId: string) => {
+//   const user = auth.currentUser;
+//   if (!user) {
+//     alert('You must be logged in to like images.');
+//     return;
+//   }
 
-  const imageDoc = doc(db, 'content', imageId);
-  await updateDoc(imageDoc, { likes: increment(1) });
-  alert('Image liked!');
-};
+//   const imageDoc = doc(db, 'content', imageId);
+//   await updateDoc(imageDoc, { likes: increment(1) });
+//   alert('Image liked!');
+// };
 
 // Comment on Image Functionality
 const commentImage = async ({ imageId, commentText }: { imageId: string; commentText: string }) => {

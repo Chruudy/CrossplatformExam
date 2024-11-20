@@ -24,11 +24,13 @@ const routes: Array<RouteRecordRaw> = [
       },
       {
         path: 'gallery',
-        component: () => import('@/views/GalleryPage.vue')
+        component: () => import('@/views/GalleryPage.vue'),
+        meta: { requiresAuth: true }
       },
       {
         path: 'home',
-        component: () => import('@/views/HomePage.vue')
+        component: () => import('@/views/HomePage.vue'),
+        meta: { requiresAuth: true }
       },
       {
         path: 'profile',
