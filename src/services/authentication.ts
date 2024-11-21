@@ -1,19 +1,49 @@
-import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, signInAnonymously, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signOut, linkWithCredential, EmailAuthProvider, updateProfile as firebaseUpdateProfile, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import app, { storage } from '../services/firebase';
-
-const auth = getAuth(app);
-const db = getFirestore(app);
+import { 
+  getAuth, 
+  setPersistence, 
+  browserLocalPersistence, 
+  signInWithEmailAndPassword, 
+  signInAnonymously, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  linkWithCredential, 
+  EmailAuthProvider, 
+  updateProfile as firebaseUpdateProfile, 
+  onAuthStateChanged, 
+  initializeAuth, 
+  indexedDBLocalPersistence, 
+  Auth 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  collection, 
+  query, 
+  where, 
+  getDocs 
+} from 'firebase/firestore';
+import { 
+  ref, 
+  uploadString, 
+  getDownloadURL 
+} from 'firebase/storage';
+import app, { storage, auth, db } from '../services/firebase';
+import { Capacitor } from '@capacitor/core';
 
 // Set Firebase Auth persistence
-setPersistence(auth, browserLocalPersistence)
-  .then(() => {
-    console.log('Firebase Auth persistence set to local');
-  })
-  .catch((error) => {
-    console.error('Error setting persistence:', error);
-  });
+if (!Capacitor.isNativePlatform()) {
+  setPersistence(auth, browserLocalPersistence)
+    .then(() => {
+      console.log('Firebase Auth persistence set to local');
+    })
+    .catch((error) => {
+      console.error('Error setting persistence:', error);
+    });
+}
 
 export const uploadProfilePicture = async (userId: string, imageDataUrl: string) => {
   const fileName = 'profile.png';
