@@ -131,7 +131,7 @@ const fetchImages = async () => {
     });
     const resolvedImagePromises = await Promise.all(imagePromises);
     images.value = resolvedImagePromises.flat();
-    availableTags.value.sort(); // Sort tags alphabetically
+    availableTags.value.sort();
     console.log('Fetched images:', images.value);
   } catch (error) {
     console.error('Error fetching images:', error);
@@ -139,25 +139,40 @@ const fetchImages = async () => {
 };
 
 const setupSnapshotListener = () => {
+  // Create a query to listen for changes in the 'content' collection
   const imagesQuery = query(collection(db, 'content'));
+
+  // Set up a real-time listener for the query
   onSnapshot(imagesQuery, (snapshot) => {
+    // Iterate over each document change in the snapshot
     snapshot.docChanges().forEach(async (change) => {
       if (change.type === 'added' || change.type === 'modified') {
+        // Get the document data
         const docData = change.doc.data();
+
+        // Get the image URL from Firebase Storage
         const imageURL = await getDownloadURL(storageRef(storage, `images/${docData.artistId}/${change.doc.id}`));
+
+        // Get the metadata for the image
         const metadata = await getMetadata(storageRef(storage, `images/${docData.artistId}/${change.doc.id}`));
+
+        // Extract artist ID and name
         const artistId = metadata.customMetadata?.artistId || 'Unknown';
         let artistName = 'Unknown Artist';
         if (artistId !== 'Unknown') {
           const artistDoc = await getDoc(doc(db, `users/${artistId}`));
           artistName = artistDoc.exists() ? artistDoc.data().displayName : 'Unknown Artist';
         }
+
+        // Extract and process tags
         const tags = metadata.customMetadata?.tags ? metadata.customMetadata.tags.split(',').map(tag => tag.trim()) : [];
         tags.forEach(tag => {
           if (!availableTags.value.includes(tag)) {
             availableTags.value.push(tag);
           }
         });
+
+        // Create an image object with the extracted data
         const image = {
           id: change.doc.id,
           src: imageURL,
@@ -172,15 +187,20 @@ const setupSnapshotListener = () => {
           createdAt: metadata.timeCreated || new Date().toISOString(),
           exhibitionId: metadata.customMetadata?.exhibitionId || 'Unknown'
         };
+
+        // Update the images array with the new or modified image
         const index = images.value.findIndex(img => img.id === change.doc.id);
         if (index !== -1) {
           images.value[index] = image;
         } else {
           images.value.push(image);
         }
-        availableTags.value.sort(); // Sort tags alphabetically
+
+        // Sort the available tags alphabetically
+        availableTags.value.sort();
         console.log('Updated images:', images.value);
       } else if (change.type === 'removed') {
+        // Remove the image from the images array if it was deleted
         images.value = images.value.filter(img => img.id !== change.doc.id);
         console.log('Removed image:', change.doc.id);
       }
@@ -190,7 +210,7 @@ const setupSnapshotListener = () => {
 
 // Filtered Images based on search query, selected sort, and selected tag
 const filteredImages = computed(() => {
-  let sortedImages = [...images.value]; // Create a copy to avoid mutation
+  let sortedImages = [...images.value];
 
   if (searchQuery.value) {
     const searchTerms = searchQuery.value.toLowerCase().split(',').map(term => term.trim());
@@ -316,8 +336,8 @@ onMounted(async () => {
 
 .filter-tags-container {
   display: flex;
-  justify-content: center; /* Center the dropdowns horizontally */
-  align-items: center; /* Center the dropdowns vertically */
+  justify-content: center;
+  align-items: center;
   padding: 16px;
   margin-left: 25%;
   gap: 16px;
@@ -326,6 +346,6 @@ onMounted(async () => {
 
 ion-select {
   width: 45%;
-  z-index: 1000; /* Ensure the dropdown is above other elements */
+  z-index: 1000;
 }
 </style>
