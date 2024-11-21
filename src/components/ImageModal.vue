@@ -39,11 +39,11 @@
       <div class="map-container">
         <div ref="map" class="map"></div>
         <div class="exhibition-details">
-          <p v-if="loading">Loading address...</p>
-          <p v-else-if="address">{{ address }}</p>
-          <p v-else class="error">Address not found</p>
+          <p>Exhibition Address:</p>
         </div>
       </div>
+      <p v-if="address">{{ address }}</p>
+      <p v-else class="error">Address not found</p>
     </div>
   </div>
 </template>
@@ -82,7 +82,7 @@ const emit = defineEmits(['closeModal']);
 // State variables
 const db = getFirestore();
 const mapElement = ref<HTMLElement | null>(null);
-const address = ref('');
+const address = ref(props.image.address || '');
 const loading = ref(true);
 const isLiked = ref(false);
 const showComments = ref(false);
@@ -106,7 +106,10 @@ const fetchAddress = async () => {
     const docRef = doc(db, 'content', props.image.id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
+      console.log('Fetched Document:', docSnap.data()); // Log fetched document
       address.value = docSnap.data().address || '';
+    } else {
+      console.error('Document does not exist:', props.image.id);
     }
   } catch (error) {
     console.error('Error fetching address:', error);
@@ -296,10 +299,11 @@ const fetchIsFollowing = async (): Promise<boolean> => {
 
 // Fetch address and initialize map on modal open
 watch(() => props.isModalOpen, async (isOpen) => {
+  console.log('Modal Open:', isOpen); // Log modal state
   if (isOpen) {
     loading.value = true;
     await loadGoogleMapsScript();
-    await fetchAddress();
+    await fetchAddress(); // Ensure this is called
     if (props.image.lat && props.image.lng) {
       await initializeMapWithCoordinates();
     }
@@ -342,6 +346,11 @@ onMounted(async () => {
       }
     });
   }
+});
+
+// Watch for changes in address
+watch(address, (newValue) => {
+  console.log('Address Value:', newValue); // Log address changes
 });
 </script>
 
@@ -450,14 +459,16 @@ onMounted(async () => {
   color: #666;
 }
 
-.exhibition-details h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
 .exhibition-details p {
   margin: 0;
   font-size: 14px;
+}
+
+.loading-address {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin-top: 10px;
 }
 
 .error {
