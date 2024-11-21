@@ -1,30 +1,95 @@
-/* For information on how to create your own theme, please see:
-http://ionicframework.com/docs/theming/ */
-
 :root {
-  --background: #79444a;
-  --container-background: #c77b58;
-  --container-shadow: #ae5d40;
-  --text-color: #d1b187;
+  /* Base Backgrounds */
+  --background: #F5F3E7; /* Soft Warm Ivory */
+  --container-background: #EAD6C4; /* Vintage Blush Beige */
+  --container-shadow: #C8A383; /* Muted Rosewood for Depth */
 
-  --primary-button: #b3a555;
-  --primary-button-shadow: #77743b;
-  --secondary-button: #8caba1;
-  --secondary-button-shadow: #4b726e;
+  /* Text Colors */
+  --text-color: #4F4033; /* Rich Espresso for Contrast */
+  --text-muted: #9C8D7C; /* Faded Taupe for Subdued Text */
 
-  --nav-bar-background: #574852;
-  --nav-bar-text: #ab9b8e;
+  /* Buttons */
+  --primary-button: #91A98F; /* Sage Green for Calm Elegance */
+  --primary-button-hover: #738D72; /* Moss Green for Hover */
+  --primary-button-shadow: #60715F; /* Forest Edge for Shadow */
+  --secondary-button: #D4A373; /* Warm Honey Gold */
+  --secondary-button-hover: #B8855E; /* Deep Sunset Coral */
+  --secondary-button-shadow: #A56C48; /* Soft Burnt Sienna */
+  --button-text: #F5F3E7; /* Soft Warm Ivory for Button Text */
 
-  --form-item-background: #f9f9f9;
-  --highlight-background: #e0e0e0;
-  --ion-item-background: #ffffff;
-  --register-page-background: #f0f2f5;
-  --ion-list-background: #fff;
-  --border-color: #e0e0e0;
+  /* Navbar */
+  --nav-bar-background: #867C79; /* Smoky Lavender Taupe */
+  --nav-bar-text: #F5F3E7; /* Soft Ivory for Readability */
+  --nav-bar-hover: #DAC3A2; /* Highlighted Warm Cream for Active/Focus */
 
-  --info-text-color: #757575;
-  --stat-span-color: #757575;
-  --ion-item-h3-color: #333;
-  --stat-ion-icon-color: #1e88e5;
-  --showcase-container-h2-color: #1e88e5;
+  /* Highlights */
+  --highlight: #E1B899; /* Vintage Peach Glow */
+  --highlight-hover: #C99F83; /* Burnt Peach for Accents */
+
+  /* Divider/Border */
+  --divider: #D3C4B1; /* Aged Parchment for Soft Separations */
+}
+
+/* Base Backgrounds */
+.background {
+  background-color: var(--background);
+}
+
+.container {
+  background-color: var(--container-background);
+  box-shadow: 0 4px 6px var(--container-shadow);
+}
+
+/* Text Colors */
+.text-color {
+  color: var(--text-color);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* Buttons */
+.primary-button {
+  background-color: var(--primary-button);
+  color: var(--button-text);
+  box-shadow: 0 4px 6px var(--primary-button-shadow);
+}
+
+.primary-button:hover {
+  background-color: var(--primary-button-hover);
+}
+
+.secondary-button {
+  background-color: var(--secondary-button);
+  color: var(--button-text);
+  box-shadow: 0 4px 6px var(--secondary-button-shadow);
+}
+
+.secondary-button:hover {
+  background-color: var(--secondary-button-hover);
+}
+
+/* Navbar */
+.nav-bar {
+  background-color: var(--nav-bar-background);
+  color: var(--nav-bar-text);
+}
+
+.nav-bar:hover {
+  background-color: var(--nav-bar-hover);
+}
+
+/* Highlights */
+.highlight {
+  background-color: var(--highlight);
+}
+
+.highlight:hover {
+  background-color: var(--highlight-hover);
+}
+
+/* Divider/Border */
+.divider {
+  border-color: var(--divider);
 }

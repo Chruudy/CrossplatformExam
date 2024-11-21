@@ -1,5 +1,4 @@
-import { 
-  getAuth, 
+import {  
   setPersistence, 
   browserLocalPersistence, 
   signInWithEmailAndPassword, 
@@ -12,12 +11,8 @@ import {
   EmailAuthProvider, 
   updateProfile as firebaseUpdateProfile, 
   onAuthStateChanged, 
-  initializeAuth, 
-  indexedDBLocalPersistence, 
-  Auth 
 } from 'firebase/auth';
 import { 
-  getFirestore, 
   doc, 
   getDoc, 
   setDoc, 
@@ -31,7 +26,7 @@ import {
   uploadString, 
   getDownloadURL 
 } from 'firebase/storage';
-import app, { storage, auth, db } from '../services/firebase';
+import { storage, auth, db } from '../services/firebase';
 import { Capacitor } from '@capacitor/core';
 
 // Set Firebase Auth persistence
