@@ -42,7 +42,7 @@
             <h2>{{ displayNameWithAt }}</h2>
             <p class="info">{{ firstName }} {{ lastName }}</p>
             <div class="stats">
-              <div class="stat" @click="showFollowers">
+              <div class="stat">
                 <ion-icon name="people-outline"></ion-icon>
                 <p>{{ followers.length }}</p>
                 <span>Followers</span>
@@ -75,25 +75,6 @@
           <ion-button expand="block" color="danger" @click="logout">Sign Out</ion-button>
         </div>
       </div>
-
-      <!-- Followers Modal -->
-      <ion-modal :isOpen="isFollowersModalOpen" @didDismiss="closeFollowersModal">
-        <ion-header>
-          <ion-toolbar>
-            <ion-title>Followers</ion-title>
-            <ion-buttons slot="end">
-              <ion-button @click="closeFollowersModal">Close</ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content>
-          <ion-list>
-            <ion-item v-for="(follower, index) in followers" :key="index">
-              <ion-label>{{ follower.displayName }}</ion-label>
-            </ion-item>
-          </ion-list>
-        </ion-content>
-      </ion-modal>
     </ion-content>
   </ion-page>
 </template>
@@ -102,7 +83,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonItem, IonInput, IonLabel, IonIcon, IonButtons, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle, IonModal, IonList } from '@ionic/vue';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonItem, IonInput, IonLabel, IonIcon, IonButtons, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardTitle } from '@ionic/vue';
 import { settings, close } from 'ionicons/icons';
 import { logoutUser, updateProfile, getUserProfile, uploadProfilePicture, getUserPosts } from '../services/authentication';
 import { auth } from '../services/firebase';
@@ -120,7 +101,6 @@ const following = ref<Array<{ displayName: string }>>([]);
 const totalLikes = ref(0);
 const posts = ref<Array<{ imageURL: string; title: string; likes: number }>>([]);
 const isAnonymous = ref(false);
-const isFollowersModalOpen = ref(false);
 
 const router = useRouter();
 const storage = getStorage();
@@ -267,13 +247,6 @@ const fetchFollowing = async (followingIds: string[]) => {
   return followingList;
 };
 
-const showFollowers = () => {
-  isFollowersModalOpen.value = true;
-};
-
-const closeFollowersModal = () => {
-  isFollowersModalOpen.value = false;
-};
 
 const displayNameWithAt = computed(() => `@${displayName.value}`);
 const displayNameWithoutAt = computed({
