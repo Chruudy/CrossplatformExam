@@ -2,12 +2,12 @@
   <div v-if="isModalOpen" class="modal" @click="closeModal">
     <div class="modal-background"></div>
     <div class="modal-content" @click.stop>
-      <img v-if="image" :src="image.src" :alt="image.alt" class="enlarged-image" />
-      <div v-if="image" class="image-details">
+      <img :src="image.src" :alt="image.alt" class="enlarged-image" />
+      <div class="image-details">
         <h2>{{ image.title }}</h2>
         <p>{{ image.description }}</p>
       </div>
-      <div v-if="image" class="map-container">
+      <div class="map-container">
         <div ref="map" class="map"></div>
         <div class="exhibition-details">
           <h2>{{ image.title }}</h2>
@@ -26,6 +26,7 @@ import { ref, watch } from 'vue';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { loadGoogleMapsScript, initializeMap } from '../services/googleService';
 
+// Define the Image interface
 interface Image {
   id: string;
   src: string;
@@ -34,66 +35,67 @@ interface Image {
   artistId: string;
   artistName: string;
   description: string;
+  likes: number;
+  comments: Array<{ userId: string; commentText: string }>;
+  tags: string[];
+  exhibitionId: string;
+  lat: number;
+  lng: number;
+  address: string;
 }
 
-const props = defineProps<{ image: Image | null; isModalOpen: boolean }>();
+// Define props and emits
+const props = defineProps<{ image: Image, isModalOpen: boolean }>();
 const emit = defineEmits(['closeModal']);
 
+// State variables
 const db = getFirestore();
 const mapElement = ref<HTMLElement | null>(null);
 const address = ref('');
-const lat = ref<number | null>(null);
-const lng = ref<number | null>(null);
 const loading = ref(true);
 
+// Function to close the modal
 const closeModal = () => {
   emit('closeModal');
 };
 
-const fetchLocationData = async () => {
-  if (!props.image?.id) {
-    console.error('Image ID is missing.');
-    loading.value = false;
-    return;
-  }
+// Function to fetch the address from Firestore
+const fetchAddress = async () => {
+  if (!props.image) return;
 
   try {
     const docRef = doc(db, 'content', props.image.id);
     const docSnap = await getDoc(docRef);
-
     if (docSnap.exists()) {
-      const data = docSnap.data();
-      address.value = data.address || 'Address not available';
-      lat.value = data.lat;
-      lng.value = data.lng;
-
-      console.log('Fetched location data:', { address: address.value, lat: lat.value, lng: lng.value });
-    } else {
-      console.error('No document found for the given image ID.');
+      address.value = docSnap.data().address || '';
     }
   } catch (error) {
-    console.error('Error fetching location data:', error);
+    console.error('Error fetching address:', error);
   } finally {
     loading.value = false;
   }
 };
 
-const setupMap = async () => {
-  if (lat.value !== null && lng.value !== null && mapElement.value) {
-    initializeMap(mapElement.value, lat.value, lng.value);
-    console.log('Map initialized.');
-  } else {
-    console.error('Cannot initialize map: Missing lat/lng or map element.');
+// Function to initialize the map with coordinates
+const initializeMapWithCoordinates = async () => {
+  if (!mapElement.value || !props.image) return;
+
+  try {
+    initializeMap(mapElement.value, props.image.lat, props.image.lng);
+  } catch (error) {
+    console.error('Error initializing map:', error);
   }
 };
 
-watch(() => props.isModalOpen, async (isOpen) => {
-  if (isOpen) {
-    console.log('Modal opened. Loading Google Maps script...');
+// Watch for changes in the modal's open state
+watch(() => props.isModalOpen, async (newVal) => {
+  if (newVal) {
+    loading.value = true;
     await loadGoogleMapsScript();
-    console.log('Google Maps script loaded. Fetching location data...');
-    await fetchLocationData();
-    await setupMap();
+    await fetchAddress();
+    if (props.image.lat && props.image.lng) {
+      initializeMapWithCoordinates();
+    }
   }
 });
 </script>
@@ -162,10 +164,27 @@ watch(() => props.isModalOpen, async (isOpen) => {
   width: 100%;
   height: 400px;
   position: relative;
+  margin-bottom: 20px;
 }
 
 .exhibition-details {
-  margin-top: 10px;
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  color: white;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.exhibition-details h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.exhibition-details p {
+  margin: 0;
+  font-size: 14px;
 }
 
 .error {

@@ -91,6 +91,7 @@ import { getStorage, ref as firebaseStorageRef, getDownloadURL } from 'firebase/
 import { getFirestore, doc, getDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
+// State variables
 const isEditMode = ref(false);
 const firstName = ref('');
 const lastName = ref('');
@@ -106,10 +107,12 @@ const router = useRouter();
 const storage = getStorage();
 const db = getFirestore();
 
+// Toggle edit mode
 const toggleEditMode = () => {
   isEditMode.value = !isEditMode.value;
 };
 
+// Take a photo using the camera
 const takePhoto = async () => {
   try {
     const image = await Camera.getPhoto({
@@ -128,6 +131,7 @@ const takePhoto = async () => {
   }
 };
 
+// Select a photo from the gallery
 const selectPhoto = async () => {
   try {
     const image = await Camera.getPhoto({
@@ -146,6 +150,7 @@ const selectPhoto = async () => {
   }
 };
 
+// Save profile changes
 const saveProfile = async () => {
   try {
     await updateProfile({
@@ -163,6 +168,7 @@ const saveProfile = async () => {
   }
 };
 
+// Logout the user
 const logout = async () => {
   try {
     await logoutUser();
@@ -174,10 +180,12 @@ const logout = async () => {
   }
 };
 
+// Navigate to the registration page
 const navigateToRegister = () => {
   router.push('/register'); // Navigate to the registration page
 };
 
+// Load user profile data
 const loadUserProfile = async () => {
   try {
     const user = auth.currentUser;
@@ -223,6 +231,7 @@ const loadUserProfile = async () => {
   }
 };
 
+// Fetch followers data
 const fetchFollowers = async (followerIds: string[]) => {
   const followersList: { displayName: string }[] = [];
   for (const id of followerIds) {
@@ -235,6 +244,7 @@ const fetchFollowers = async (followerIds: string[]) => {
   return followersList;
 };
 
+// Fetch following data
 const fetchFollowing = async (followingIds: string[]) => {
   const followingList: { displayName: string }[] = [];
   for (const id of followingIds) {
@@ -247,13 +257,16 @@ const fetchFollowing = async (followingIds: string[]) => {
   return followingList;
 };
 
-
+// Computed property to display the display name with '@'
 const displayNameWithAt = computed(() => `@${displayName.value}`);
+
+// Computed property to handle the display name without '@'
 const displayNameWithoutAt = computed({
   get: () => displayName.value.startsWith('@') ? displayName.value.slice(1) : displayName.value,
   set: (value) => displayName.value = value.startsWith('@') ? value : `@${value}`
 });
 
+// Set up snapshot listener for likes
 const setupLikesSnapshotListener = () => {
   const user = auth.currentUser;
   if (!user) return;
@@ -275,6 +288,7 @@ const setupLikesSnapshotListener = () => {
   });
 };
 
+// Set up snapshot listener for followers
 const setupFollowersSnapshotListener = () => {
   const user = auth.currentUser;
   if (!user) return;
@@ -289,6 +303,7 @@ const setupFollowersSnapshotListener = () => {
   });
 };
 
+// Load user profile on component mount
 onMounted(() => {
   onAuthStateChanged(auth, (user) => {
     if (user) {

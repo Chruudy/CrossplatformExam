@@ -10,26 +10,32 @@
       <div id="login-container">
         <ion-card>
           <ion-card-content>
+            <!-- Username Input -->
             <ion-item>
               <ion-icon slot="start" name="person-circle-outline"></ion-icon>
               <ion-input v-model="username" type="text" placeholder="Username"></ion-input>
             </ion-item>
+            <!-- Password Input -->
             <ion-item>
               <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
               <ion-input v-model="password" type="password" placeholder="Password"></ion-input>
             </ion-item>
+            <!-- Login Button -->
             <ion-button expand="block" color="primary" @click="login">
               <ion-icon slot="start" name="log-in-outline"></ion-icon>
               Login
             </ion-button>
+            <!-- Login with Google Button -->
             <ion-button expand="block" color="danger" @click="loginWithGoogle">
               <ion-icon slot="start" name="logo-google"></ion-icon>
               Login with Google
             </ion-button>
+            <!-- Login Anonymously Button -->
             <ion-button expand="block" color="medium" @click="loginAnonymously">
               <ion-icon slot="start" name="person-outline"></ion-icon>
               Login Anonymously
             </ion-button>
+            <!-- Navigate to Register Button -->
             <ion-button expand="block" fill="clear" color="dark" @click="navigateToRegister">
               <ion-icon slot="start" name="person-add-outline"></ion-icon>
               Don't have an account? Register here
@@ -47,10 +53,12 @@ import { useRouter } from 'vue-router';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonCard, IonCardContent, IonItem, IonInput, IonButton, IonIcon } from '@ionic/vue';
 import { signInWithEmail, signInWithGoogle, signInAnonymouslyUser } from '../services/authentication';
 
+// State variables for username and password
 const username = ref('');
 const password = ref('');
 const router = useRouter();
 
+// Function to handle login with email and password
 const login = async () => {
   if (username.value && password.value) {
     try {
@@ -66,6 +74,7 @@ const login = async () => {
   }
 };
 
+// Function to handle login with Google
 const loginWithGoogle = async () => {
   try {
     const user = await signInWithGoogle();
@@ -77,6 +86,7 @@ const loginWithGoogle = async () => {
   }
 };
 
+// Function to handle anonymous login
 const loginAnonymously = async () => {
   try {
     const user = await signInAnonymouslyUser();
@@ -88,6 +98,7 @@ const loginAnonymously = async () => {
   }
 };
 
+// Function to navigate to the registration page
 const navigateToRegister = () => {
   router.push('/register'); // Navigate to the registration page
 };

@@ -11,6 +11,7 @@ import {
 import { getFirestore } from "firebase/firestore";
 import { Capacitor } from "@capacitor/core";
 
+// Firebase configuration object
 const firebaseConfig = {
   apiKey: "AIzaSyA1oDPqeL_hL2KMrw3uKWnmLfY7RFHeJHg",
   authDomain: "artvista-2c1e0.firebaseapp.com",
@@ -21,12 +22,20 @@ const firebaseConfig = {
   measurementId: "G-BN3LTMBFCD"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-let auth: Auth;
 
+// Initialize Firebase Analytics
+const analytics = getAnalytics(app);
+
+// Initialize Firestore
+const db = getFirestore(app);
+
+// Initialize Firebase Storage
+const storage = getStorage(app);
+
+// Initialize Firebase Auth with different persistence based on platform
+let auth: Auth;
 if (Capacitor.isNativePlatform()) {
   auth = initializeAuth(app, {
     persistence: indexedDBLocalPersistence,
@@ -35,5 +44,6 @@ if (Capacitor.isNativePlatform()) {
   auth = getAuth(app);
 }
 
+// Export initialized Firebase services
 export { app, analytics, storage, auth, db };
 export default app;

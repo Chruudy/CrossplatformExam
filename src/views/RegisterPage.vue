@@ -10,14 +10,17 @@
       <div id="register-container">
         <ion-card>
           <ion-card-content>
+            <!-- Username Input -->
             <ion-item>
               <ion-icon slot="start" name="person-circle-outline"></ion-icon>
               <ion-input v-model="username" type="text" placeholder="Username"></ion-input>
             </ion-item>
+            <!-- Password Input -->
             <ion-item>
               <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
               <ion-input v-model="password" type="password" placeholder="Password"></ion-input>
             </ion-item>
+            <!-- Register Button -->
             <ion-button expand="block" color="primary" @click="register">
               <ion-icon slot="start" name="person-add-outline"></ion-icon>
               Register
@@ -35,10 +38,12 @@ import { useRouter } from 'vue-router';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonCard, IonCardContent, IonItem, IonInput, IonButton, IonIcon } from '@ionic/vue';
 import { signUpWithEmail } from '../services/authentication';
 
+// State variables for username and password
 const username = ref('');
 const password = ref('');
 const router = useRouter();
 
+// Function to handle user registration
 const register = async () => {
   if (username.value && password.value) {
     try {

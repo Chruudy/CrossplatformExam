@@ -53,6 +53,7 @@ import { translateDescription as googleTranslateDescription } from '@/services/t
 
 const db = getFirestore();
 
+// Define the Image interface
 interface Image {
   id: string;
   src: string;
@@ -70,15 +71,18 @@ interface Image {
   address: string;
 }
 
+// Define the Comment interface
 interface Comment {
   userId: string;
   commentText: string;
   displayName?: string;
 }
 
+// Define props and emits
 const props = defineProps<{ image: Image }>();
 const emit = defineEmits(['like', 'comment', 'follow']);
 
+// State variables
 const isLiked = ref(false);
 const showComments = ref(false);
 const likes = ref(props.image.likes);
@@ -88,6 +92,7 @@ const tags = ref([...props.image.tags]);
 const isModalOpen = ref(false);
 const isFollowing = ref(false);
 
+// Watch for changes in image likes, comments, and tags
 watch(() => props.image.likes, (newLikes) => {
   likes.value = newLikes;
 });
@@ -100,6 +105,7 @@ watch(() => props.image.tags, (newTags) => {
   tags.value = [...newTags];
 });
 
+// Fetch comments with display names
 const fetchCommentsWithDisplayNames = async (comments: Array<{ userId: string; commentText: string }>): Promise<Comment[]> => {
   const commentsWithDisplayNames: Comment[] = [];
   for (const comment of comments) {
@@ -110,6 +116,7 @@ const fetchCommentsWithDisplayNames = async (comments: Array<{ userId: string; c
   return commentsWithDisplayNames;
 };
 
+// Fetch if the current user has liked the image
 const fetchIsLiked = async (): Promise<boolean> => {
   const user = auth.currentUser;
   if (!user) return false;
@@ -121,6 +128,7 @@ const fetchIsLiked = async (): Promise<boolean> => {
   return likedBy.includes(user.uid);
 };
 
+// Fetch if the current user is following the artist
 const fetchIsFollowing = async (): Promise<boolean> => {
   const user = auth.currentUser;
   if (!user) return false;
@@ -132,6 +140,7 @@ const fetchIsFollowing = async (): Promise<boolean> => {
   return following.includes(props.image.artistId);
 };
 
+// On component mount, fetch comments, likes, and following status
 onMounted(async () => {
   comments.value = await fetchCommentsWithDisplayNames(props.image.comments);
   isLiked.value = await fetchIsLiked();
@@ -160,6 +169,7 @@ onMounted(async () => {
 
 let isProcessing = false;
 
+// Toggle like status
 const toggleLike = async () => {
   if (isProcessing) return;
   isProcessing = true;
@@ -212,10 +222,12 @@ const toggleLike = async () => {
   }
 };
 
+// Toggle comments section visibility
 const toggleComments = () => {
   showComments.value = !showComments.value;
 };
 
+// Add a new comment
 const addComment = async (commentText: string) => {
   if (commentText.trim()) {
     const user = auth.currentUser;
@@ -233,6 +245,7 @@ const addComment = async (commentText: string) => {
   }
 };
 
+// Delete a comment
 const deleteComment = async (index: number) => {
   const user = auth.currentUser;
   if (!user) {
@@ -252,6 +265,7 @@ const deleteComment = async (index: number) => {
   });
 };
 
+// Toggle follow status
 const toggleFollow = async () => {
   if (isProcessing) return;
   isProcessing = true;
@@ -286,14 +300,17 @@ const toggleFollow = async () => {
   }
 };
 
+// Translate the description
 const translateDescription = async () => {
   translatedDescription.value = await googleTranslateDescription(props.image.description);
 };
 
+// Open the image modal
 const openModal = () => {
   isModalOpen.value = true;
 };
 
+// Close the image modal
 const closeModal = () => {
   isModalOpen.value = false;
 };
@@ -303,9 +320,9 @@ const closeModal = () => {
 .image {
   cursor: pointer;
   transition: transform 0.2s;
-  width: 100%; /* Set your desired width */
-  height: 200px; /* Set your desired height */
-  object-fit: cover; /* Ensure the image covers the area without distortion */
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
 }
 
 .image:hover {

@@ -1,5 +1,3 @@
-// src/services/googleService.ts
-
 export const loadGoogleMapsScript = (): Promise<void> => {
   return new Promise<void>((resolve, reject) => {
     if (typeof window.google !== 'undefined') {

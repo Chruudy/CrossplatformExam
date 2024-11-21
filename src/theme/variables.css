@@ -1,33 +1,33 @@
 :root {
   /* Base Backgrounds */
-  --background: #F5F3E7; /* Soft Warm Ivory */
-  --container-background: #EAD6C4; /* Vintage Blush Beige */
-  --container-shadow: #C8A383; /* Muted Rosewood for Depth */
+  --background: #F5F3E7;
+  --container-background: #EAD6C4;
+  --container-shadow: #C8A383;
 
   /* Text Colors */
-  --text-color: #4F4033; /* Rich Espresso for Contrast */
-  --text-muted: #9C8D7C; /* Faded Taupe for Subdued Text */
+  --text-color: #4F4033;
+  --text-muted: #9C8D7C;
 
   /* Buttons */
-  --primary-button: #91A98F; /* Sage Green for Calm Elegance */
-  --primary-button-hover: #738D72; /* Moss Green for Hover */
-  --primary-button-shadow: #60715F; /* Forest Edge for Shadow */
-  --secondary-button: #D4A373; /* Warm Honey Gold */
-  --secondary-button-hover: #B8855E; /* Deep Sunset Coral */
-  --secondary-button-shadow: #A56C48; /* Soft Burnt Sienna */
-  --button-text: #F5F3E7; /* Soft Warm Ivory for Button Text */
+  --primary-button: #91A98F;
+  --primary-button-hover: #738D72;
+  --primary-button-shadow: #60715F;
+  --secondary-button: #D4A373;
+  --secondary-button-hover: #B8855E;
+  --secondary-button-shadow: #A56C48;
+  --button-text: #F5F3E7;
 
   /* Navbar */
-  --nav-bar-background: #867C79; /* Smoky Lavender Taupe */
-  --nav-bar-text: #F5F3E7; /* Soft Ivory for Readability */
-  --nav-bar-hover: #DAC3A2; /* Highlighted Warm Cream for Active/Focus */
+  --nav-bar-background: #867C79;
+  --nav-bar-text: #F5F3E7;
+  --nav-bar-hover: #DAC3A2;
 
   /* Highlights */
-  --highlight: #E1B899; /* Vintage Peach Glow */
-  --highlight-hover: #C99F83; /* Burnt Peach for Accents */
+  --highlight: #E1B899;
+  --highlight-hover: #C99F83;
 
   /* Divider/Border */
-  --divider: #D3C4B1; /* Aged Parchment for Soft Separations */
+  --divider: #D3C4B1;
 }
 
 /* Base Backgrounds */

@@ -75,6 +75,7 @@ const storage = getStorage(app);
 const route = useRoute();
 const userId = String(route.params.userId);
 
+// State variables
 const firstName = ref('');
 const lastName = ref('');
 const displayName = ref('');
@@ -86,6 +87,7 @@ const posts = ref<Array<{ imageURL: string; title: string; likes: number; create
 const isFollowing = ref(false);
 const sortOption = ref('newest');
 
+// Load user profile data
 const loadUserProfile = async () => {
   try {
     const docRef = doc(db, 'users', userId);
@@ -137,6 +139,7 @@ const loadUserProfile = async () => {
   }
 };
 
+// Set up snapshot listener for likes
 const setupLikesSnapshotListener = () => {
   const postsQuery = query(collection(db, 'content'), where('artistId', '==', userId));
   onSnapshot(postsQuery, (snapshot) => {
@@ -153,6 +156,7 @@ const setupLikesSnapshotListener = () => {
   });
 };
 
+// Set up snapshot listener for followers
 const setupFollowersSnapshotListener = () => {
   const profileDocRef = doc(db, 'users', userId);
   onSnapshot(profileDocRef, (doc) => {
@@ -164,6 +168,7 @@ const setupFollowersSnapshotListener = () => {
   });
 };
 
+// Toggle follow/unfollow user
 const toggleFollow = async () => {
   const user = auth.currentUser;
   if (!user) {
@@ -172,33 +177,32 @@ const toggleFollow = async () => {
   }
 
   try {
-    console.log('Toggling follow status...');
     const userDocRef = doc(db, 'users', user.uid);
     const profileDocRef = doc(db, 'users', userId);
 
     if (isFollowing.value) {
-      console.log('Unfollowing user...');
       await updateDoc(userDocRef, { following: arrayRemove(userId) });
       await updateDoc(profileDocRef, { followers: arrayRemove(user.uid) });
     } else {
-      console.log('Following user...');
       await updateDoc(userDocRef, { following: arrayUnion(userId) });
       await updateDoc(profileDocRef, { followers: arrayUnion(user.uid) });
     }
 
     isFollowing.value = !isFollowing.value;
-    console.log('Follow status toggled.');
   } catch (error) {
     console.error('Error toggling follow status:', error);
   }
 };
 
+// Send message (not implemented)
 const sendMessage = () => {
   alert('Message functionality is not implemented yet.');
 };
 
+// Computed property to display the display name with '@'
 const displayNameWithAt = computed(() => `@${displayName.value}`);
 
+// Computed property to sort posts
 const sortedPosts = computed(() => {
   if (sortOption.value === 'newest') {
     return [...posts.value].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -210,10 +214,12 @@ const sortedPosts = computed(() => {
   return posts.value;
 });
 
+// Apply sorting option
 const applySort = (value: string) => {
   sortOption.value = value;
 };
 
+// Load user profile on component mount
 onMounted(loadUserProfile);
 </script>
 

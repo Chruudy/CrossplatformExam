@@ -20,15 +20,6 @@
           <ion-input v-model="uploadTags" type="text" placeholder="Enter tags (e.g., landscape, abstract, modern)"></ion-input>
         </ion-item>
         <ion-item class="form-item">
-          <ion-label position="stacked">Exhibition</ion-label>
-          <ion-select v-model="selectedExhibition" placeholder="Select Exhibition">
-            <ion-select-option value="">None</ion-select-option>
-            <ion-select-option v-for="exhibition in exhibitions" :key="exhibition.id" :value="exhibition.id">
-              {{ exhibition.name }} - {{ exhibition.country }}
-            </ion-select-option>
-          </ion-select>
-        </ion-item>
-        <ion-item class="form-item">
           <ion-input v-model="exhibitionAddress" type="text" placeholder="Enter the exhibition address"></ion-input>
         </ion-item>
         <ion-item lines="none" class="form-item">
@@ -58,29 +49,29 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { getFirestore, collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { app, auth } from '../services/firebase';
-import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonTextarea, IonCard, IonCardContent, IonCardTitle, IonSelect, IonSelectOption } from '@ionic/vue';
+import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonTextarea, IonCard, IonCardContent, IonCardTitle } from '@ionic/vue';
 import { geocodeAddress, loadGoogleMapsScript } from '../services/googleService';
 
+// Define props and emits
 const props = defineProps({
   isOpen: Boolean,
 });
-
 const emit = defineEmits(['close', 'upload']);
 
+// State variables
 const uploadTitle = ref('');
 const uploadTags = ref('');
 const uploadDescription = ref('');
 const uploadFile = ref<File | null>(null);
 const previewImage = ref('');
-const selectedExhibition = ref<string>('');
 const exhibitionAddress = ref('');
-const exhibitions = ref<Array<{ id: string; name: string; country: string }>>([]);
 
 const storage = getStorage(app);
 const db = getFirestore(app);
 
+// Function to close the modal and reset form values
 const closeModal = () => {
   emit('close');
   // Reset values
@@ -89,10 +80,10 @@ const closeModal = () => {
   uploadDescription.value = '';
   uploadFile.value = null;
   previewImage.value = '';
-  selectedExhibition.value = '';
   exhibitionAddress.value = '';
 };
 
+// Function to handle file input change and generate a preview
 const handleFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement;
   if (target.files && target.files[0]) {
@@ -105,6 +96,7 @@ const handleFileChange = (event: Event) => {
   }
 };
 
+// Function to upload the image and save metadata to Firestore
 const uploadImage = async () => {
   if (!uploadFile.value || !uploadTitle.value || !uploadTags.value || !uploadDescription.value || !exhibitionAddress.value) {
     alert('Please provide all required fields.');
@@ -127,7 +119,6 @@ const uploadImage = async () => {
         title: uploadTitle.value,
         description: uploadDescription.value,
         tags: uploadTags.value,
-        exhibitionId: selectedExhibition.value || 'None',
         address: exhibitionAddress.value,
         lat: location.lat.toString(),
         lng: location.lng.toString(),
@@ -155,7 +146,6 @@ const uploadImage = async () => {
         likes: 0,
         comments: [],
         createdAt: new Date(),
-        exhibitionId: selectedExhibition.value || 'None',
         address: exhibitionAddress.value,
         lat: location.lat,
         lng: location.lng,
@@ -170,19 +160,6 @@ const uploadImage = async () => {
   }
 };
 
-const fetchExhibitions = async () => {
-  try {
-    const exhibitionsSnapshot = await getDocs(collection(db, 'exhibitions'));
-    exhibitions.value = exhibitionsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data().name,
-      country: doc.data().country,
-    }));
-  } catch (error) {
-    console.error('Error fetching exhibitions:', error);
-  }
-};
-
 // Watch the isOpen prop to reset the form when the modal is opened
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
@@ -191,9 +168,7 @@ watch(() => props.isOpen, (newVal) => {
     uploadDescription.value = '';
     uploadFile.value = null;
     previewImage.value = '';
-    selectedExhibition.value = '';
     exhibitionAddress.value = '';
-    fetchExhibitions();
   }
 });
 </script>

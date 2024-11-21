@@ -10,44 +10,36 @@
         <h1>Welcome, {{ firstName }}!</h1>
         <p>Explore our app and enjoy the features we have to offer.</p>
       </div>
-      <div id="activity-container">
-        <h2>Recent Activity</h2>
-        <ion-list>
-          <ion-item v-for="(activity, index) in recentActivities" :key="index">
-            <ion-icon :icon="activity.icon" slot="start"></ion-icon>
-            <ion-label>
-              <h3>{{ activity.message }}</h3>
-              <p>{{ activity.timestamp }}</p>
-            </ion-label>
-          </ion-item>
-        </ion-list>
-      </div>
       <div id="showcase-container">
         <h2>Recent Posts from Followed Users</h2>
-        <div class="grid-container">
-          <div class="grid-item" v-for="(image, index) in followedImages" :key="index" @click="openImageModal(image)">
-            <img :src="image.src" :alt="image.alt" />
-            <div class="image-title">{{ image.title }}</div>
+        <div v-for="(user, index) in followedUsersPosts" :key="index" class="user-posts-container">
+          <div class="horizontal-scroll">
+            <div class="grid-item" v-for="(image, index) in user.posts" :key="index" @click="openImageModal(image)">
+              <img :src="image.src" :alt="image.alt" />
+              <div class="image-title">{{ image.title }}</div>
+            </div>
           </div>
         </div>
       </div>
-      <ImageModal v-if="isModalOpen" :image="selectedImage" :isModalOpen="isModalOpen" @closeModal="closeModal" />
+      <ImageModal v-if="isModalOpen && selectedImage" :image="selectedImage" :isModalOpen="isModalOpen" @closeModal="closeModal" />
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonLabel, IonIcon } from '@ionic/vue';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
 import { getFirestore, collection, query, where, limit, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { auth } from '../services/firebase';
-import { heart, personAdd } from 'ionicons/icons';
 import { onAuthStateChanged } from 'firebase/auth';
 import ImageModal from '../components/ImageModal.vue';
 
 const db = getFirestore();
 
+// State variables
 const firstName = ref('');
+
+// Define the Image interface
 interface Image {
   id: string;
   src: string;
@@ -56,71 +48,80 @@ interface Image {
   description: string;
   artistId: string;
   artistName: string;
+  likes: number;
+  comments: Array<{ userId: string; commentText: string }>;
+  tags: string[];
+  exhibitionId: string;
+  lat: number;
+  lng: number;
+  address: string;
 }
 
-interface Activity {
-  icon: string;
-  message: string;
-  timestamp: string;
+// Define the UserPosts interface
+interface UserPosts {
+  artistName: string;
+  posts: Image[];
 }
 
-const followedImages = ref<Image[]>([]);
-const recentActivities = ref<Activity[]>([]);
+// Reactive state variables
+const followedUsersPosts = ref<UserPosts[]>([]);
 const isModalOpen = ref(false);
 const selectedImage = ref<Image | null>(null);
 const userProfile = ref<any>(null);
 
+// Function to load images from followed users
 const loadFollowedImages = async (followedUsers: string[]) => {
   try {
     if (followedUsers.length > 0) {
       const contentQuery = query(collection(db, 'content'), where('artistId', 'in', followedUsers), orderBy('createdAt', 'desc'), limit(10));
       onSnapshot(contentQuery, (snapshot) => {
-        followedImages.value = snapshot.docs.map(doc => ({
-          id: doc.id,
-          src: doc.data().imageURL,
-          alt: doc.data().title,
-          title: doc.data().title,
-          description: doc.data().description,
-          artistId: doc.data().artistId,
-          artistName: doc.data().artistName
-        }));
+        const userPostsMap: { [key: string]: UserPosts } = {};
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const image: Image = {
+            id: doc.id,
+            src: data.imageURL,
+            alt: data.title,
+            title: data.title,
+            description: data.description,
+            artistId: data.artistId,
+            artistName: data.artistName,
+            likes: data.likes || 0,
+            comments: data.comments || [],
+            tags: data.tags || [],
+            exhibitionId: data.exhibitionId || '',
+            lat: data.lat || 0,
+            lng: data.lng || 0,
+            address: data.address || ''
+          };
+          if (!userPostsMap[data.artistId]) {
+            userPostsMap[data.artistId] = { artistName: data.artistName, posts: [] };
+          }
+          userPostsMap[data.artistId].posts.push(image);
+        });
+        followedUsersPosts.value = Object.values(userPostsMap);
       });
     } else {
-      followedImages.value = []; // Clear the followed images if no followed users
+      followedUsersPosts.value = []; // Clear the followed images if no followed users
     }
   } catch (error) {
     console.error('Error loading followed images:', error);
   }
 };
 
-const loadRecentActivities = async () => {
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated');
-
-    const activitiesQuery = query(collection(db, 'activities'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'), limit(10));
-    onSnapshot(activitiesQuery, (snapshot) => {
-      recentActivities.value = snapshot.docs.map(doc => ({
-        icon: doc.data().type === 'like' ? heart : personAdd,
-        message: doc.data().message,
-        timestamp: new Date(doc.data().timestamp.toMillis()).toLocaleString()
-      }));
-    });
-  } catch (error) {
-    console.error('Error loading recent activities:', error);
-  }
-};
-
+// Function to open the image modal
 const openImageModal = (image: Image) => {
   selectedImage.value = image;
   isModalOpen.value = true;
 };
 
+// Function to close the image modal
 const closeModal = () => {
   isModalOpen.value = false;
   selectedImage.value = null;
 };
 
+// Load user profile and data on component mount
 onMounted(() => {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -133,7 +134,6 @@ onMounted(() => {
             await loadFollowedImages(userProfile.value.following || []);
           }
         });
-        await loadRecentActivities();
       } catch (error) {
         console.error("Error loading user profile:", error);
       }
@@ -167,42 +167,6 @@ p {
   color: #666;
 }
 
-/* Activity Container Styling */
-#activity-container {
-  padding: 20px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
-}
-
-#activity-container h2 {
-  font-size: 22px;
-  color: #1e88e5;
-  margin-bottom: 10px;
-}
-
-ion-list {
-  background: #fff;
-  border-radius: 8px;
-}
-
-ion-item {
-  --background: #f9f9f9;
-  --border-color: #e0e0e0;
-  margin-bottom: 10px;
-}
-
-ion-item h3 {
-  font-size: 16px;
-  color: #333;
-}
-
-ion-item p {
-  font-size: 14px;
-  color: #757575;
-}
-
 /* Showcase Container Styling */
 #showcase-container {
   padding: 20px;
@@ -218,14 +182,22 @@ ion-item p {
   margin-bottom: 10px;
 }
 
-/* Grid Styling */
-.grid-container {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+/* User Posts Container Styling */
+.user-posts-container {
+  margin-bottom: 30px;
+}
+
+/* Horizontal Scroll Styling */
+.horizontal-scroll {
+  display: flex;
+  overflow-x: auto;
   gap: 16px;
+  padding: 16px;
 }
 
 .grid-item {
+  flex: 0 0 auto;
+  width: 200px;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

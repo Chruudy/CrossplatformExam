@@ -40,6 +40,7 @@ if (!Capacitor.isNativePlatform()) {
     });
 }
 
+// Upload profile picture to Firebase Storage
 export const uploadProfilePicture = async (userId: string, imageDataUrl: string) => {
   const fileName = 'profile.png';
   const storageRef = ref(storage, `profilePictures/${userId}/${fileName}`);
@@ -47,6 +48,7 @@ export const uploadProfilePicture = async (userId: string, imageDataUrl: string)
   return await getDownloadURL(storageRef);
 };
 
+// Sign up with email and password
 export const signUpWithEmail = async (name: string, email: string, password: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -68,6 +70,7 @@ export const signUpWithEmail = async (name: string, email: string, password: str
   }
 };
 
+// Sign in with email and password
 export const signInWithEmail = async (email: string, password: string) => {
   try {
     return await signInWithEmailAndPassword(auth, email, password);
@@ -77,6 +80,7 @@ export const signInWithEmail = async (email: string, password: string) => {
   }
 };
 
+// Sign in with Google
 export const signInWithGoogle = async () => {
   try {
     const provider = new GoogleAuthProvider();
@@ -108,6 +112,7 @@ export const signInWithGoogle = async () => {
   }
 };
 
+// Sign in anonymously
 export const signInAnonymouslyUser = async () => {
   try {
     return await signInAnonymously(auth);
@@ -117,6 +122,7 @@ export const signInAnonymouslyUser = async () => {
   }
 };
 
+// Log out the user
 export const logoutUser = async () => {
   try {
     return await signOut(auth);
@@ -126,6 +132,7 @@ export const logoutUser = async () => {
   }
 };
 
+// Link anonymous account with email and password
 export const linkAnonymousAccount = async (email: string, password: string) => {
   try {
     const credential = EmailAuthProvider.credential(email, password);
@@ -141,6 +148,7 @@ export const linkAnonymousAccount = async (email: string, password: string) => {
   }
 };
 
+// Update user profile
 export const updateProfile = async (profile: { displayName: string; photoURL: string; firstName: string; lastName: string }) => {
   try {
     const user = auth.currentUser;
@@ -161,6 +169,7 @@ export const updateProfile = async (profile: { displayName: string; photoURL: st
   }
 };
 
+// Get user profile from Firestore
 export const getUserProfile = async () => {
   try {
     const user = auth.currentUser;
@@ -181,6 +190,7 @@ export const getUserProfile = async () => {
   }
 };
 
+// Get user posts from Firestore
 export const getUserPosts = async () => {
   try {
     const user = auth.currentUser;
@@ -197,6 +207,7 @@ export const getUserPosts = async () => {
   }
 };
 
+// Get user feed from Firestore
 export const getUserFeed = async () => {
   try {
     const user = auth.currentUser;

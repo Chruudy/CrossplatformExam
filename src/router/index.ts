@@ -3,8 +3,9 @@ import { RouteRecordRaw } from 'vue-router';
 import NavBar from '../views/NavBar.vue';
 import LoginPage from '../views/LoginPage.vue';
 import RegisterPage from '../views/RegisterPage.vue';
-import { auth } from '../services/firebase'; // Ensure this import is correct
+import { auth } from '../services/firebase';
 
+// Define the routes for the application
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
@@ -46,19 +47,21 @@ const routes: Array<RouteRecordRaw> = [
   }
 ];
 
+// Create the router instance
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes
 });
 
+// Navigation guard to check for authentication
 router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const isAuthenticated = auth.currentUser;
 
   if (requiresAuth && !isAuthenticated) {
-    next('/');
+    next('/'); // Redirect to login page if not authenticated
   } else {
-    next();
+    next(); // Proceed to the route
   }
 });
 

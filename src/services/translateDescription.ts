@@ -1,5 +1,3 @@
-// src/services/TranslateDescription.ts
-
 export const translateDescription = async (description: string): Promise<string> => {
   try {
     const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=AIzaSyABoN3EsB_jyScms9laVjpwoUeFre5jmhU`, {
