@@ -288,15 +288,16 @@ const setupLikesSnapshotListener = () => {
   const postsRef = collection(db, 'content');
   const postsQuery = query(postsRef, where('artistId', '==', user.uid));
   onSnapshot(postsQuery, (snapshot) => {
-    const updatedPosts = snapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id
-    }));
-    posts.value = updatedPosts.map(post => ({
-      imageURL: post.imageURL,
-      title: post.title,
-      likes: post.likes || 0
-    }));
+    const updatedPosts = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        imageURL: data.imageURL,
+        title: data.title,
+        likes: data.likes || 0
+      };
+    });
+    posts.value = updatedPosts;
     totalLikes.value = posts.value.reduce((sum, post) => sum + post.likes, 0);
   });
 };

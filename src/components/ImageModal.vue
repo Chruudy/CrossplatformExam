@@ -24,7 +24,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { loadGoogleMapsScript, geocodeAddress, initializeMap } from '../services/googleService';
+import { loadGoogleMapsScript, initializeMap } from '../services/googleService';
 
 interface Image {
   id: string;
@@ -34,79 +34,66 @@ interface Image {
   artistId: string;
   artistName: string;
   description: string;
-  likes: number;
-  comments: Array<{ userId: string; commentText: string }>;
-  tags: string[];
-  exhibitionId: string;
-  lat: number;
-  lng: number;
-  address: string;
 }
 
-const props = defineProps<{ image: Image, isModalOpen: boolean }>();
+const props = defineProps<{ image: Image; isModalOpen: boolean }>();
 const emit = defineEmits(['closeModal']);
 
 const db = getFirestore();
 const mapElement = ref<HTMLElement | null>(null);
 const address = ref('');
+const lat = ref<number | null>(null);
+const lng = ref<number | null>(null);
 const loading = ref(true);
 
 const closeModal = () => {
   emit('closeModal');
 };
 
-const fetchAddress = async () => {
+const fetchLocationData = async () => {
+  if (!props.image.id) {
+    console.error('Image ID is missing.');
+    loading.value = false;
+    return;
+  }
+
   try {
-    console.log('Fetching address for image ID:', props.image.id);
     const docRef = doc(db, 'content', props.image.id);
     const docSnap = await getDoc(docRef);
+
     if (docSnap.exists()) {
-      address.value = docSnap.data().address || '';
-      if (!address.value) {
-        console.error('Address field is empty');
-      } else {
-        console.log('Address fetched:', address.value);
-      }
+      const data = docSnap.data();
+      address.value = data.address || 'Address not available';
+      lat.value = data.lat;
+      lng.value = data.lng;
+
+      console.log('Fetched location data:', { address: address.value, lat: lat.value, lng: lng.value });
     } else {
-      console.error('No such document!');
+      console.error('No document found for the given image ID.');
     }
   } catch (error) {
-    console.error('Error fetching address:', error);
+    console.error('Error fetching location data:', error);
   } finally {
     loading.value = false;
   }
 };
 
-const initializeMapWithAddress = async () => {
-  if (!mapElement.value) {
-    console.error('Map element is not available.');
-    return;
-  }
-
-  try {
-    console.log('Geocoding address:', address.value);
-    const location = await geocodeAddress(address.value);
-    console.log('Geocoded location:', location);
-    initializeMap(mapElement.value, location.lat, location.lng);
-    console.log('Map initialized with marker at location:', location);
-  } catch (error) {
-    console.error('Error initializing map:', error);
+const setupMap = async () => {
+  if (lat.value !== null && lng.value !== null && mapElement.value) {
+    initializeMap(mapElement.value, lat.value, lng.value);
+    console.log('Map initialized.');
+  } else {
+    console.error('Cannot initialize map: Missing lat/lng or map element.');
   }
 };
 
-watch(() => props.isModalOpen, async (newVal) => {
-  if (newVal) {
-    loading.value = true;
-    console.log('Modal opened, loading Google Maps script...');
+watch(() => props.isModalOpen, async (isOpen) => {
+  if (isOpen) {
+    console.log('Modal opened. Loading Google Maps script...');
     await loadGoogleMapsScript();
-    console.log('Google Maps script loaded, fetching address...');
-    await fetchAddress();
-    if (address.value) {
-      console.log('Address found, initializing map...');
-      initializeMapWithAddress();
-    } else {
-      console.error('Address not found, map initialization skipped.');
-    }
+    console.log('Google Maps script loaded. Fetching location data...');
+    await fetchLocationData();
+    await setupMap();
   }
 });
 </script>
@@ -175,27 +162,10 @@ watch(() => props.isModalOpen, async (newVal) => {
   width: 100%;
   height: 400px;
   position: relative;
-  margin-bottom: 20px;
 }
 
 .exhibition-details {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  color: white;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 10px;
-  border-radius: 8px;
-}
-
-.exhibition-details h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.exhibition-details p {
-  margin: 0;
-  font-size: 14px;
+  margin-top: 10px;
 }
 
 .error {

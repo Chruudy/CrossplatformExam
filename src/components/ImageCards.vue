@@ -53,6 +53,29 @@ import { translateDescription as googleTranslateDescription } from '@/services/t
 
 const db = getFirestore();
 
+interface Image {
+  id: string;
+  src: string;
+  alt: string;
+  title: string;
+  artistId: string;
+  artistName: string;
+  description: string;
+  likes: number;
+  comments: Array<{ userId: string; commentText: string }>;
+  tags: string[];
+  exhibitionId: string;
+  lat: number;
+  lng: number;
+  address: string;
+}
+
+interface Comment {
+  userId: string;
+  commentText: string;
+  displayName?: string;
+}
+
 const props = defineProps<{ image: Image }>();
 const emit = defineEmits(['like', 'comment', 'follow']);
 

@@ -42,7 +42,7 @@
               <ion-card-title>{{ uploadTitle }}</ion-card-title>
               <p>{{ uploadDescription }}</p>
               <div class="tags">
-                <span v-for="(tag, index) in uploadTags.split(',').map(tag => tag.trim())" :key="index" class="tag">
+                <span v-for="(tag, index) in uploadTags.split(',').map((tag: string) => tag.trim())" :key="index" class="tag">
                   #{{ tag }}
                 </span>
               </div>
@@ -150,7 +150,7 @@ const uploadImage = async () => {
         title: uploadTitle.value,
         imageURL,
         artistId: user.uid,
-        tags: uploadTags.value.split(',').map(tag => tag.trim()),
+        tags: uploadTags.value.split(',').map((tag: string) => tag.trim()),
         description: uploadDescription.value,
         likes: 0,
         comments: [],
