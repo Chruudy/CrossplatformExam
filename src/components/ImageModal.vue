@@ -2,12 +2,12 @@
   <div v-if="isModalOpen" class="modal" @click="closeModal">
     <div class="modal-background"></div>
     <div class="modal-content" @click.stop>
-      <img :src="image.src" :alt="image.alt" class="enlarged-image" />
-      <div class="image-details">
+      <img v-if="image" :src="image.src" :alt="image.alt" class="enlarged-image" />
+      <div v-if="image" class="image-details">
         <h2>{{ image.title }}</h2>
         <p>{{ image.description }}</p>
       </div>
-      <div class="map-container">
+      <div v-if="image" class="map-container">
         <div ref="map" class="map"></div>
         <div class="exhibition-details">
           <h2>{{ image.title }}</h2>
@@ -36,7 +36,7 @@ interface Image {
   description: string;
 }
 
-const props = defineProps<{ image: Image; isModalOpen: boolean }>();
+const props = defineProps<{ image: Image | null; isModalOpen: boolean }>();
 const emit = defineEmits(['closeModal']);
 
 const db = getFirestore();
@@ -51,7 +51,7 @@ const closeModal = () => {
 };
 
 const fetchLocationData = async () => {
-  if (!props.image.id) {
+  if (!props.image?.id) {
     console.error('Image ID is missing.');
     loading.value = false;
     return;

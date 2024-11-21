@@ -43,7 +43,7 @@
         <ImageCard 
           v-for="image in filteredImages" 
           :key="image.id"
-          :image="image"
+          :image="{ ...image, lat: 0, lng: 0, address: '' }"
           @comment="commentImage"
         />
       </div>
@@ -121,7 +121,10 @@ const fetchImages = async () => {
           tags,
           alt: metadata.customMetadata?.title || 'Untitled',
           createdAt: metadata.timeCreated || new Date().toISOString(),
-          exhibitionId: metadata.customMetadata?.exhibitionId || 'Unknown'
+          exhibitionId: metadata.customMetadata?.exhibitionId || 'Unknown',
+          lat: docData?.lat || 0,
+          lng: docData?.lng || 0,
+          address: docData?.address || 'Unknown'
         };
       });
       return Promise.all(itemPromises);

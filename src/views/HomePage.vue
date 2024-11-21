@@ -54,6 +54,8 @@ interface Image {
   alt: string;
   title: string;
   description: string;
+  artistId: string;
+  artistName: string;
 }
 
 interface Activity {
@@ -78,7 +80,9 @@ const loadFollowedImages = async (followedUsers: string[]) => {
           src: doc.data().imageURL,
           alt: doc.data().title,
           title: doc.data().title,
-          description: doc.data().description
+          description: doc.data().description,
+          artistId: doc.data().artistId,
+          artistName: doc.data().artistName
         }));
       });
     } else {
