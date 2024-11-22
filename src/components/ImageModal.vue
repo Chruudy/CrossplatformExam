@@ -39,7 +39,6 @@
       <div class="map-container">
         <div ref="map" class="map"></div>
         <div class="exhibition-details">
-          <p>Exhibition Address:</p>
         </div>
       </div>
       <p v-if="address">{{ address }}</p>
@@ -53,6 +52,7 @@ import { ref, watch, onMounted } from 'vue';
 import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment, runTransaction, onSnapshot } from 'firebase/firestore';
 import { auth } from '../services/firebase';
 import { heart, heartOutline, chatbubbleOutline, personAddOutline, personRemoveOutline, language } from 'ionicons/icons';
+import { IonButton, IonIcon } from '@ionic/vue';
 import CommentsSection from './CommentsSection.vue';
 import { loadGoogleMapsScript, initializeMap } from '../services/googleService';
 import { translateDescription as googleTranslateDescription } from '@/services/translateDescription';
@@ -82,7 +82,9 @@ const emit = defineEmits(['closeModal']);
 // State variables
 const db = getFirestore();
 const mapElement = ref<HTMLElement | null>(null);
-const address = ref(props.image.address || '');
+const address = ref('');
+const lat = ref(0);
+const lng = ref(0);
 const loading = ref(true);
 const isLiked = ref(false);
 const showComments = ref(false);
@@ -98,21 +100,26 @@ const closeModal = () => {
   emit('closeModal');
 };
 
-// Function to fetch the address from Firestore
-const fetchAddress = async () => {
+// Function to fetch the address, lat, and lng from Firestore
+const fetchAddressAndCoordinates = async () => {
   if (!props.image) return;
 
   try {
-    const docRef = doc(db, 'content', props.image.id);
+    const docRef = doc(db, 'locations', props.image.id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       console.log('Fetched Document:', docSnap.data()); // Log fetched document
       address.value = docSnap.data().address || '';
+      lat.value = docSnap.data().lat || 0;
+      lng.value = docSnap.data().lng || 0;
+      console.log('Address:', address.value); // Log address value
+      console.log('Latitude:', lat.value); // Log latitude value
+      console.log('Longitude:', lng.value); // Log longitude value
     } else {
       console.error('Document does not exist:', props.image.id);
     }
   } catch (error) {
-    console.error('Error fetching address:', error);
+    console.error('Error fetching address and coordinates:', error);
   } finally {
     loading.value = false;
   }
@@ -303,7 +310,7 @@ watch(() => props.isModalOpen, async (isOpen) => {
   if (isOpen) {
     loading.value = true;
     await loadGoogleMapsScript();
-    await fetchAddress(); // Ensure this is called
+    await fetchAddressAndCoordinates(); // Ensure this is called
     if (props.image.lat && props.image.lng) {
       await initializeMapWithCoordinates();
     }
