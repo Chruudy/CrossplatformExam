@@ -110,8 +110,17 @@ const uploadImage = async () => {
   }
 
   try {
-    await loadGoogleMapsScript();
-    const location = await geocodeAddress(exhibitionAddress.value);
+    let address = exhibitionAddress.value;
+    let location = { lat: 0, lng: 0 };
+
+    if (address.toLowerCase().includes('stolen')) {
+      address = 'Stolen';
+    } else if (address.toLowerCase().includes('missing')) {
+      address = 'Missing';
+    } else {
+      await loadGoogleMapsScript();
+      location = await geocodeAddress(address);
+    }
 
     const metadata = {
       customMetadata: {
@@ -119,7 +128,7 @@ const uploadImage = async () => {
         title: uploadTitle.value,
         description: uploadDescription.value,
         tags: uploadTags.value,
-        address: exhibitionAddress.value,
+        address,
         lat: location.lat.toString(),
         lng: location.lng.toString(),
       },
@@ -146,7 +155,7 @@ const uploadImage = async () => {
         likes: 0,
         comments: [],
         createdAt: new Date(),
-        address: exhibitionAddress.value,
+        address,
         lat: location.lat,
         lng: location.lng,
       });

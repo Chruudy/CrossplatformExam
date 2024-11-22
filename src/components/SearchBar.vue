@@ -20,7 +20,7 @@ import { ref } from 'vue';
 import { IonItem, IonInput } from '@ionic/vue';
 
 // Define props and emits
-const props = defineProps<{ suggestedUsers: Array<{ displayName: string }> }>();
+const props = defineProps<{ suggestedUsers: Array<{ displayName: string, id: string }> }>();
 const emit = defineEmits(['search', 'selectUser']);
 
 // State variables
@@ -39,7 +39,7 @@ const handleInput = () => {
 };
 
 // Select a user from the suggestions
-const selectUser = (user: { displayName: string }) => {
+const selectUser = (user: { displayName: string, id: string }) => {
   searchQuery.value = `@${user.displayName}`;
   showSuggestions.value = false;
   emit('selectUser', user);
