@@ -77,7 +77,7 @@ const route = useRoute();
 const searchQuery = ref<string>(''); // Search query
 const images = ref<Array<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string; exhibitionId: string }>>([]); // Images array
 const isUploadModalOpen = ref(false); // Modal state
-const suggestedUsers = ref<Array<{ displayName: string }>>([]);
+const suggestedUsers = ref<Array<{ displayName: string; id: string }>>([]);
 const showSuggestions = ref(false);
 const availableTags = ref<string[]>([]); // Available tags for filtering
 const selectedSort = ref<string>(''); // Selected sort option
@@ -260,14 +260,17 @@ const search = async (searchTerm: string) => {
       limit(5)
     );
     const querySnapshot = await getDocs(artistQuery);
-    suggestedUsers.value = querySnapshot.docs.map(doc => doc.data() as { displayName: string });
+    suggestedUsers.value = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { displayName: data.displayName, id: doc.id };
+    });
   } else {
     showSuggestions.value = false;
   }
 };
 
 // Select User Functionality (for search suggestions)
-const selectUser = (user: { displayName: string }) => {
+const selectUser = (user: { displayName: string; id: string }) => {
   searchQuery.value = `@${user.displayName}`;
   showSuggestions.value = false;
   search(searchQuery.value);
