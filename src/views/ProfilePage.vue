@@ -225,6 +225,8 @@ const loadUserProfile = async () => {
       setupLikesSnapshotListener();
       // Set up snapshot listener for followers
       setupFollowersSnapshotListener();
+      // Set up snapshot listener for displayName
+      setupDisplayNameSnapshotListener();
     }
   } catch (error) {
     console.error("Error loading user profile:", error);
@@ -299,6 +301,20 @@ const setupFollowersSnapshotListener = () => {
       const profile = doc.data();
       followers.value = profile.followers || [];
       following.value = profile.following || [];
+    }
+  });
+};
+
+// Set up snapshot listener for displayName
+const setupDisplayNameSnapshotListener = () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const userDocRef = doc(db, 'users', user.uid);
+  onSnapshot(userDocRef, (doc) => {
+    if (doc.exists()) {
+      const profile = doc.data();
+      displayName.value = profile.displayName || '';
     }
   });
 };
