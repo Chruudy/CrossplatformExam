@@ -51,7 +51,6 @@ interface Image {
   likes: number;
   comments: Array<{ userId: string; commentText: string }>;
   tags: string[];
-  exhibitionId: string;
   lat: number;
   lng: number;
   address: string;
@@ -89,7 +88,6 @@ const loadFollowedImages = async (followedUsers: string[]) => {
             likes: data.likes || 0,
             comments: data.comments || [],
             tags: data.tags || [],
-            exhibitionId: data.exhibitionId || '',
             lat: data.lat || 0,
             lng: data.lng || 0,
             address: data.address || ''

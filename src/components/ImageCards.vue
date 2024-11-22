@@ -65,7 +65,6 @@ interface Image {
   likes: number;
   comments: Array<{ userId: string; commentText: string }>;
   tags: string[];
-  exhibitionId: string;
   lat: number;
   lng: number;
   address: string;

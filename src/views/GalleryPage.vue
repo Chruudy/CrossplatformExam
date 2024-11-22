@@ -43,7 +43,7 @@
         <ImageCard 
           v-for="image in filteredImages" 
           :key="image.id"
-          :image="{ ...image, lat: 0, lng: 0, address: '' }"
+          :image="image"
           @comment="commentImage"
         />
       </div>
@@ -75,7 +75,7 @@ const route = useRoute();
 
 // Reactive State
 const searchQuery = ref<string>(''); // Search query
-const images = ref<Array<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string; exhibitionId: string }>>([]); // Images array
+const images = ref<Array<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string; lat: number; lng: number; address: string }>>([]); // Images array
 const isUploadModalOpen = ref(false); // Modal state
 const suggestedUsers = ref<Array<{ displayName: string; id: string }>>([]);
 const showSuggestions = ref(false);
@@ -83,7 +83,7 @@ const availableTags = ref<string[]>([]); // Available tags for filtering
 const selectedSort = ref<string>(''); // Selected sort option
 const selectedTag = ref<string>(''); // Selected tag option
 const isModalOpen = ref(false);
-const modalImage = ref<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string; exhibitionId: string } | null>(null);
+const modalImage = ref<{ id: string; src: string; title: string; artistId: string; alt: string; artistName: string; description: string; likes: number; comments: Array<{ userId: string; commentText: string }>; tags: string[]; createdAt: string; lat: number; lng: number; address: string } | null>(null);
 
 // Fetch Images from Firebase Storage
 const fetchImages = async () => {
@@ -121,7 +121,6 @@ const fetchImages = async () => {
           tags,
           alt: metadata.customMetadata?.title || 'Untitled',
           createdAt: metadata.timeCreated || new Date().toISOString(),
-          exhibitionId: metadata.customMetadata?.exhibitionId || 'Unknown',
           lat: docData?.lat || 0,
           lng: docData?.lng || 0,
           address: docData?.address || 'Unknown'
@@ -185,7 +184,9 @@ const setupSnapshotListener = () => {
           tags,
           alt: metadata.customMetadata?.title || 'Untitled',
           createdAt: metadata.timeCreated || new Date().toISOString(),
-          exhibitionId: metadata.customMetadata?.exhibitionId || 'Unknown'
+          lat: docData?.lat || 0,
+          lng: docData?.lng || 0,
+          address: docData?.address || 'Unknown'
         };
 
         // Update the images array with the new or modified image
