@@ -43,6 +43,7 @@ const selectUser = (user: { displayName: string, id: string }) => {
   searchQuery.value = `@${user.displayName}`;
   showSuggestions.value = false;
   emit('selectUser', user);
+  emit('search', user.displayName); // Emit search event without "@"
 };
 </script>
 
